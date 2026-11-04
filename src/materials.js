@@ -6,7 +6,7 @@
   function std(o) { return new THREE.MeshStandardMaterial(o); }
   function tex(t, tile, o) {
     var m = std(Object.assign({ map: t.map, normalMap: t.normalMap, roughnessMap: t.roughnessMap, roughness: 1, envMapIntensity: 0.65 }, o || {}));
-    m.userData.tile = tile; return m;
+    m.userData.tile = tile; if (MP.Detail) MP.Detail.material(m, t); return m;
   }
   // A photographic set says how many metres one copy covers; use that for world-mapped surfaces.
   function tileOf(t, fallback) { return t && t.tile ? [t.tile, t.tile] : fallback; }
@@ -34,7 +34,7 @@
     M.verdigris = std({ color: new THREE.Color('#5a9a86'), metalness: 0.35, roughness: 0.55 });
     M.leaf = std({ vertexColors: true, roughness: 0.82, envMapIntensity: 0.5 });
     // tree crowns wear a foliage photo when there is one; the per-vertex colour then only shades it (darker beneath)
-    function foliage(t) { if (!t) return M.leaf; var m = std({ map: t.map, normalMap: t.normalMap, roughness: 0.85, vertexColors: true, envMapIntensity: 0.5 }); m.userData.photo = true; return m; }
+    function foliage(t) { if (!t) return M.leaf; var m = std({ map: t.map, normalMap: t.normalMap, roughness: 0.85, vertexColors: true, envMapIntensity: 0.5 }); m.userData.photo = true; MP.Detail.material(m, t); return m; }
     M.blossom = foliage(T.blossom); M.needles = foliage(T.pine);
     M.hills = std({ vertexColors: true, roughness: 1, envMapIntensity: 0.4, side: THREE.DoubleSide }); M.hills.userData.castShadow = false; M.hills.userData.receiveShadow = false;
     T.water.normalMap.repeat.set(1, 1);

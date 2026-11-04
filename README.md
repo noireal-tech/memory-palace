@@ -22,6 +22,7 @@ offline cache list (`sw.js`).
 | `src/textures.js` | Stone, plaster, timber, roof tiles, gravel, grass, water: painted in code, kept on the device after the first visit. |
 | `src/materials.js` | The material library. |
 | `src/render.js` | Renderer, sky, clouds, sunlight and sky light, batching, the frame loop, the VR session. |
+| `src/detail.js` | The detail bubble: full-resolution materials only within 25 m of you, standard 1K beyond. |
 | `src/world.js` | Where you can stand and what blocks the way; geometry helpers. |
 | `src/site.js` | The platform, moat, causeway, stair, forecourt, streets, gardens and hills (the same under every skin). |
 | `src/nature.js` | Cherry trees, pines, shrubs, stone lanterns. |
@@ -37,6 +38,7 @@ offline cache list (`sw.js`).
     python3 tests/shots.py      # loads it, reports draw cost, takes views into tests/shots/
     python3 tests/grant.py      # VR hand-off from the portal (emulated Quest 3 via IWER)
     python3 tests/trip.py ../endless-clay-app   # the portal round trip with Endless Clay
+    python3 tests/detail.py     # the 25 m detail bubble (full resolution only near you)
 
 ## The Quest app
 

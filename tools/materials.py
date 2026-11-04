@@ -3,7 +3,8 @@
 #   2. make it tile seamlessly: shift it by half, then patch the old border back along the cut where the two copies
 #      agree best (a minimum-error cut, as in image quilting), so there's no visible seam and no ghosting
 #   3. derive relief (a normal map) and roughness from the picture's detail
-#   4. write <name>.jpg (colour, roughness in a separate file) at the chosen size
+#   4. write the full-resolution set (<name>.jpg, <name>-n.jpg: loaded only near you) and a standard 1K set
+#      (<name>-1k.jpg, <name>-n-1k.jpg: always), plus roughness (<name>-r.jpg)
 # Usage: python3 tools/materials.py <source image> <name> <size> <normal strength> <rough lo> <rough hi> [invert-rough]
 import sys, os
 import numpy as np
@@ -90,8 +91,11 @@ def main():
         if im.size[0] != sz: im = im.resize((sz, sz), Image.LANCZOS)
         im.save(os.path.join(out, fn), quality=q, optimize=True, progressive=False)
     save(a, name + '.jpg', size, 88)
+    save(a, name + '-1k.jpg', 1024, 86)               # standard: everywhere, and always loaded
     small = np.asarray(Image.fromarray(np.clip(a * 255, 0, 255).astype(np.uint8)).resize((min(size, 2048),) * 2, Image.LANCZOS), dtype=np.float32) / 255.0
-    save(normal_map(small, strength), name + '-n.jpg', min(size, 2048), 90)
+    nm = normal_map(small, strength)
+    save(nm, name + '-n.jpg', min(size, 2048), 90)
+    save(nm, name + '-n-1k.jpg', 1024, 88)
     r = roughness(small, rlo, rhi, invert)
     save(np.repeat(r[:, :, None], 3, axis=2), name + '-r.jpg', 1024, 85)
     print(name, 'done', size)

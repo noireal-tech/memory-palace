@@ -83,6 +83,7 @@
     if (g.index) g = g.toNonIndexed();
     if (!g.attributes.normal) g.computeVertexNormals();
     if (!keepUV && mat.userData.tile) worldUV(g, mat.userData.tile);
+    if (mat.userData.set && MP.Detail) MP.Detail.note(mat, g); // where this material is, for the detail bubble
     if (!this.lists.has(mat)) this.lists.set(mat, []);
     this.lists.get(mat).push(g);
   };

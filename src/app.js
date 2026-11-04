@@ -76,6 +76,6 @@
     place: function (x, y, z, hold) { R.rig.position.set(x, y, z); P.hold = !!hold; MP.Portal.reset(); },
     look: function (yaw, pitch) { P.flatYaw = yaw; P.flatPitch = pitch; R.rig.rotation.y = yaw; R.camera.rotation.set(pitch, 0, 0); },
     walk: function (n, f, s) { for (var i = 0; i < n; i++) { P.move(1 / 60, f, s || 0); MP.Portal.check(); } return R.rig.position.toArray(); },
-    lastLink: function () { return MP.lastLink || null; }
+    lastLink: function () { return MP.lastLink || null; }, detail: function () { MP.Detail.update(true); return MP.Detail.report(); }
   };
 })();

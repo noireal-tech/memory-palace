@@ -185,9 +185,9 @@
   async function loadSet(name) {
     var ix = await photoIndex(), e = ix[name]; if (!e) return null;
     var f = e.files, out = await Promise.all([loadTex('textures/' + f[0], true), f[1] ? loadTex('textures/' + f[1], false) : null, f[2] ? loadTex('textures/' + f[2], false) : null]);
-    return { map: out[0], normalMap: out[1], roughnessMap: out[2], tile: e.tile || null, photo: true, roughLo: e.roughLo, roughHi: e.roughHi };
+    return { name: name, map: out[0], normalMap: out[1], roughnessMap: out[2], tile: e.tile || null, photo: true, hi: e.hi ? e.hi.map(function (f) { return 'textures/' + f; }) : null, hiSize: e.hiSize || 0 };
   }
   // A material set by name: the photographic one if present, otherwise painted here.
   async function get(name) { var s = await loadSet(name); return s || (RECIPES[name] ? make(name) : null); }
-  MP.Tex = { setRenderer: setRenderer, paint: paint, make: make, get: get, photoIndex: photoIndex, names: Object.keys(RECIPES), version: TEX_VERSION };
+  MP.Tex = { loadTex: loadTex, setRenderer: setRenderer, paint: paint, make: make, get: get, photoIndex: photoIndex, names: Object.keys(RECIPES), version: TEX_VERSION };
 })();

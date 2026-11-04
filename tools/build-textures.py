@@ -33,7 +33,8 @@ for n in names:
     size, strength, lo, hi, inv, seam, tile = SETS[n]
     args = ['python3', os.path.join(HERE, 'materials.py'), src, n, str(size), str(strength), str(lo), str(hi), 'invert' if inv else 'keep', 'seam' if seam else 'noseam']
     subprocess.run(args, check=True)
-    e = {'files': [n + '.jpg', n + '-n.jpg', n + '-r.jpg']}
+    # lo: the standard set, always loaded; hi: full resolution, loaded only inside the detail bubble
+    e = {'files': [n + '-1k.jpg', n + '-n-1k.jpg', n + '-r.jpg'], 'hi': [n + '.jpg', n + '-n.jpg'], 'hiSize': size}
     if tile: e['tile'] = tile
     index[n] = e
 json.dump(index, open(ix_path, 'w'), indent=2, sort_keys=True); open(ix_path, 'a').write('\n')
