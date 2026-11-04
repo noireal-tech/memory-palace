@@ -10,10 +10,17 @@ import sys, os
 import numpy as np
 from PIL import Image, ImageFilter
 
-def load(p):
+def load(p, square=True):
     im = Image.open(p).convert('RGB')
-    s = min(im.size); l = (im.width - s) // 2; t = (im.height - s) // 2
-    return np.asarray(im.crop((l, t, l + s, t + s)), dtype=np.float32) / 255.0
+    if square:
+        s = min(im.size); l = (im.width - s) // 2; t = (im.height - s) // 2; im = im.crop((l, t, l + s, t + s))
+    return np.asarray(im, dtype=np.float32) / 255.0
+
+def seam_score(a):
+    # how much worse the wrap-around joins are than an ordinary pair of neighbouring columns/rows (1 = seamless)
+    inner = (np.abs(np.diff(a, axis=1)).mean() + np.abs(np.diff(a, axis=0)).mean()) / 2
+    wrap = (np.abs(a[:, 0] - a[:, -1]).mean() + np.abs(a[0] - a[-1]).mean()) / 2
+    return wrap / max(inner, 1e-6)
 
 def blur(a, r):
     im = Image.fromarray(np.clip(a * 255, 0, 255).astype(np.uint8))
@@ -60,6 +67,31 @@ def seamless(a):
     a = seamless_x(a, band)
     return np.transpose(seamless_x(np.transpose(a, (1, 0, 2)), band), (1, 0, 2))
 
+def period(profile, lo, hi):
+    # the repeat length of a regular pattern (tile rows, courses): the strongest self-match between lo and hi pixels
+    x = profile - profile.mean(); best, bp = -1, None
+    for p in range(lo, hi):
+        c = (x[:-p] * x[p:]).mean()
+        if c > best: best, bp = c, p
+    return bp
+
+def periodic_crop(a):
+    # crop a regular pattern to a whole number of repeats each way, so it tiles exactly
+    g = a.mean(axis=2); H, W = g.shape
+    px = period(np.abs(np.diff(g, axis=1)).mean(axis=0), W // 40, W // 4)
+    py = period(np.abs(np.diff(g, axis=0)).mean(axis=1), H // 40, H // 4)
+    # refine: the multiple of the period closest to the full width whose two ends match best
+    def best_len(axis, p, n):
+        cands = [k * p + d for k in range(n // p, max(1, n // p - 3), -1) for d in range(-3, 4) if 0 < k * p + d <= n]
+        def err(L): return np.abs(a[:, 0] - a[:, L - 1 + 1 if L < n else L - 1]).mean() if axis == 1 else np.abs(a[0] - a[L - 1 + 1 if L < n else L - 1]).mean()
+        def joint(L):
+            if axis == 1: return np.abs(a[:, 0] - a[:, L % n]).mean() if L < n else 9
+            return np.abs(a[0] - a[L % n]).mean() if L < n else 9
+        return min(cands, key=joint)
+    Lx, Ly = best_len(1, px, W), best_len(0, py, H)
+    print('periods', px, py, '-> crop', Lx, Ly)
+    return a[:Ly, :Lx]
+
 def normal_map(a, strength):
     lum = a @ np.array([0.3, 0.59, 0.11], dtype=np.float32)
     h = lum - blur(np.repeat(lum[:, :, None], 3, axis=2), a.shape[0] / 64)[:, :, 0]  # detail only
@@ -82,17 +114,26 @@ def main():
     invert = len(sys.argv) > 7 and sys.argv[7] == 'invert'
     out = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'textures')
     os.makedirs(out, exist_ok=True)
-    a = load(src)
-    work = 2048 if a.shape[0] >= 2048 else a.shape[0]   # the cut is worked out at 2K, then applied at full size
-    a = flatten(a)
-    a = seamless(a) if len(sys.argv) <= 8 or sys.argv[8] != 'noseam' else a
+    tiling = len(sys.argv) <= 8 or sys.argv[8] != 'noseam'
+    crop = [float(v) for v in sys.argv[9].split(',')] if len(sys.argv) > 9 else None   # l,t,r,b fractions to trim (panels)
+    a = load(src, square=tiling)
+    if crop:
+        H, W = a.shape[:2]; a = a[int(H * crop[1]):H - int(H * crop[3]), int(W * crop[0]):W - int(W * crop[2])]
+    if tiling:
+        a = flatten(a)
+        if os.environ.get('PERIODIC'): a = periodic_crop(a); a = np.asarray(Image.fromarray(np.clip(a * 255, 0, 255).astype(np.uint8)).resize((size, size), Image.LANCZOS), dtype=np.float32) / 255.0
+        sc = seam_score(a)
+        if sc > 1.6: a = seamless(a)   # images that already tile are left alone
+        print(name, 'seam score', round(sc, 2), '-> made seamless' if sc > 1.6 else '-> already tiles')
     def save(arr, fn, sz, q):
         im = Image.fromarray(np.clip(arr * 255 + 0.5, 0, 255).astype(np.uint8))
-        if im.size[0] != sz: im = im.resize((sz, sz), Image.LANCZOS)
+        h = round(sz * im.size[1] / im.size[0])
+        if im.size != (sz, h): im = im.resize((sz, h), Image.LANCZOS)
         im.save(os.path.join(out, fn), quality=q, optimize=True, progressive=False)
     save(a, name + '.jpg', size, 88)
     save(a, name + '-1k.jpg', 1024, 86)               # standard: everywhere, and always loaded
-    small = np.asarray(Image.fromarray(np.clip(a * 255, 0, 255).astype(np.uint8)).resize((min(size, 2048),) * 2, Image.LANCZOS), dtype=np.float32) / 255.0
+    sw = min(size, 2048); sh = round(sw * a.shape[0] / a.shape[1])
+    small = np.asarray(Image.fromarray(np.clip(a * 255, 0, 255).astype(np.uint8)).resize((sw, sh), Image.LANCZOS), dtype=np.float32) / 255.0
     nm = normal_map(small, strength)
     save(nm, name + '-n.jpg', min(size, 2048), 90)
     save(nm, name + '-n-1k.jpg', 1024, 88)

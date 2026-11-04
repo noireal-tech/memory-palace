@@ -19,7 +19,7 @@ offline cache list (`sw.js`).
 | --- | --- |
 | `index.html` | The page. Its first script catches a VR session handed over by the portal before anything else loads. |
 | `src/util.js` | Noise, sliced work (so the headset keeps drawing), on-device storage. |
-| `src/textures.js` | Stone, plaster, timber, roof tiles, gravel, grass, water: painted in code, kept on the device after the first visit. |
+| `src/textures.js` | Loads the photographic materials in `textures/` (generated in Runway, then made seamless with relief and roughness maps by `tools/build-textures.py`); falls back to materials painted in code. |
 | `src/materials.js` | The material library. |
 | `src/render.js` | Renderer, sky, clouds, sunlight and sky light, batching, the frame loop, the VR session. |
 | `src/detail.js` | The detail bubble: full-resolution materials only within 25 m of you, standard 1K beyond. |

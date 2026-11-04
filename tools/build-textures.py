@@ -8,8 +8,8 @@ SETS = {
     'stone':   (4096, 7.0, 0.70, 0.95, False, True, 4.0),
     'plaster': (4096, 2.0, 0.80, 0.95, False, True, 3.0),
     'timber':  (4096, 4.0, 0.55, 0.85, False, True, 2.0),
-    'roof':    (4096, 6.0, 0.30, 0.70, True,  True, 2.4),
-    'gate':    (4096, 4.0, 0.40, 0.80, False, False, None),
+    'roof':    (4096, 6.0, 0.30, 0.70, True,  True, 3.6),
+    'gate':    (3072, 4.0, 0.40, 0.80, False, False, None),
     'paving':  (4096, 4.0, 0.60, 0.90, False, True, 4.0),
     'gravel':  (2048, 5.0, 0.85, 0.98, False, True, 2.5),
     'grass':   (2048, 3.0, 0.90, 1.00, False, True, 3.0),
@@ -19,6 +19,9 @@ SETS = {
     'window':  (2048, 3.0, 0.60, 0.90, False, False, None),
     'shoji':   (2048, 1.5, 0.80, 0.95, False, False, None),
 }
+# panels trimmed of background around them (left, top, right, bottom fractions)
+CROP = {'gate': '0,0.035,0,0'}
+PERIODIC = {'roof'}
 def find(name):
     for ext in ('png', 'jpg', 'jpeg', 'webp'):
         p = os.path.join(SRC, name + '.' + ext)
@@ -32,7 +35,9 @@ for n in names:
     if not src: print('no source image for', n); continue
     size, strength, lo, hi, inv, seam, tile = SETS[n]
     args = ['python3', os.path.join(HERE, 'materials.py'), src, n, str(size), str(strength), str(lo), str(hi), 'invert' if inv else 'keep', 'seam' if seam else 'noseam']
-    subprocess.run(args, check=True)
+    if n in CROP: args.append(CROP[n])
+    env = dict(os.environ, PERIODIC='1') if n in PERIODIC else None   # regular patterns: crop to whole repeats
+    subprocess.run(args, check=True, env=env)
     # lo: the standard set, always loaded; hi: full resolution, loaded only inside the detail bubble
     e = {'files': [n + '-1k.jpg', n + '-n-1k.jpg', n + '-r.jpg'], 'hi': [n + '.jpg', n + '-n.jpg'], 'hiSize': size}
     if tile: e['tile'] = tile

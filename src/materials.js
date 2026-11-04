@@ -13,15 +13,16 @@
   function repeat(t, r) { ['map', 'normalMap', 'roughnessMap'].forEach(function (k) { if (t[k]) t[k].repeat.set(r, r); }); }
   MP.makeMaterials = function (T) {
     M.stone = tex(T.stone, tileOf(T.stone, [3.4, 3.4]));
-    M.paving = tex(T.paving, tileOf(T.paving, [6, 6]));
+    M.paving = tex(T.paving, tileOf(T.paving, [6, 6]), T.paving.photo ? { color: new THREE.Color('#d6d2cb') } : {});
     M.plaster = tex(T.plaster, tileOf(T.plaster, [3, 3]));
     M.trim = tex(T.plaster, tileOf(T.plaster, [3, 3]), { color: new THREE.Color('#fbf8f1') });           // white plastered eave edges
     M.timber = tex(T.timber, tileOf(T.timber, [1.6, 1.6]));
     M.eave = tex(T.timber, [1.2, 1.2], { color: new THREE.Color(T.timber.photo ? '#c79a78' : '#9a6a48') }); // rafters under the eaves
     if (T.roof.tile) repeat(T.roof, 2.2 / T.roof.tile);   // roof sheets are laid out at one copy per 2.2 m
-    M.roof = tex(T.roof, null, { envMapIntensity: 1.1 });
+    // a photographed glazed roof already carries its sheen; keep the sky's reflection modest so it reads dark grey, not blue
+    M.roof = tex(T.roof, null, T.roof.photo ? { color: new THREE.Color('#b4b6ba'), envMapIntensity: 0.7 } : { envMapIntensity: 1.1 });
     M.ridge = tex(T.roof, [1.4, 1.4], { envMapIntensity: 1.1 });
-    M.gravel = tex(T.gravel, tileOf(T.gravel, [3, 3]));
+    M.gravel = tex(T.gravel, tileOf(T.gravel, [3, 3]), T.gravel.photo ? { color: new THREE.Color('#cbc6bc') } : {});
     M.grass = tex(T.grass, tileOf(T.grass, [8, 8])); M.grass.userData.castShadow = false;
     if (T.bark.photo) repeat(T.bark, 2);
     M.bark = tex(T.bark, null); M.bark.userData.tile = null;

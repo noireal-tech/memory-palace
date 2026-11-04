@@ -1,1 +1,165 @@
-{}
+{
+  "bark": {
+    "files": [
+      "bark-1k.jpg",
+      "bark-n-1k.jpg",
+      "bark-r.jpg"
+    ],
+    "hi": [
+      "bark.jpg",
+      "bark-n.jpg"
+    ],
+    "hiSize": 2048
+  },
+  "blossom": {
+    "files": [
+      "blossom-1k.jpg",
+      "blossom-n-1k.jpg",
+      "blossom-r.jpg"
+    ],
+    "hi": [
+      "blossom.jpg",
+      "blossom-n.jpg"
+    ],
+    "hiSize": 2048
+  },
+  "gate": {
+    "files": [
+      "gate-1k.jpg",
+      "gate-n-1k.jpg",
+      "gate-r.jpg"
+    ],
+    "hi": [
+      "gate.jpg",
+      "gate-n.jpg"
+    ],
+    "hiSize": 3072
+  },
+  "grass": {
+    "files": [
+      "grass-1k.jpg",
+      "grass-n-1k.jpg",
+      "grass-r.jpg"
+    ],
+    "hi": [
+      "grass.jpg",
+      "grass-n.jpg"
+    ],
+    "hiSize": 2048,
+    "tile": 3.0
+  },
+  "gravel": {
+    "files": [
+      "gravel-1k.jpg",
+      "gravel-n-1k.jpg",
+      "gravel-r.jpg"
+    ],
+    "hi": [
+      "gravel.jpg",
+      "gravel-n.jpg"
+    ],
+    "hiSize": 2048,
+    "tile": 2.5
+  },
+  "paving": {
+    "files": [
+      "paving-1k.jpg",
+      "paving-n-1k.jpg",
+      "paving-r.jpg"
+    ],
+    "hi": [
+      "paving.jpg",
+      "paving-n.jpg"
+    ],
+    "hiSize": 4096,
+    "tile": 4.0
+  },
+  "pine": {
+    "files": [
+      "pine-1k.jpg",
+      "pine-n-1k.jpg",
+      "pine-r.jpg"
+    ],
+    "hi": [
+      "pine.jpg",
+      "pine-n.jpg"
+    ],
+    "hiSize": 2048
+  },
+  "plaster": {
+    "files": [
+      "plaster-1k.jpg",
+      "plaster-n-1k.jpg",
+      "plaster-r.jpg"
+    ],
+    "hi": [
+      "plaster.jpg",
+      "plaster-n.jpg"
+    ],
+    "hiSize": 4096,
+    "tile": 3.0
+  },
+  "roof": {
+    "files": [
+      "roof-1k.jpg",
+      "roof-n-1k.jpg",
+      "roof-r.jpg"
+    ],
+    "hi": [
+      "roof.jpg",
+      "roof-n.jpg"
+    ],
+    "hiSize": 4096,
+    "tile": 3.6
+  },
+  "shoji": {
+    "files": [
+      "shoji-1k.jpg",
+      "shoji-n-1k.jpg",
+      "shoji-r.jpg"
+    ],
+    "hi": [
+      "shoji.jpg",
+      "shoji-n.jpg"
+    ],
+    "hiSize": 2048
+  },
+  "stone": {
+    "files": [
+      "stone-1k.jpg",
+      "stone-n-1k.jpg",
+      "stone-r.jpg"
+    ],
+    "hi": [
+      "stone.jpg",
+      "stone-n.jpg"
+    ],
+    "hiSize": 4096,
+    "tile": 4.0
+  },
+  "timber": {
+    "files": [
+      "timber-1k.jpg",
+      "timber-n-1k.jpg",
+      "timber-r.jpg"
+    ],
+    "hi": [
+      "timber.jpg",
+      "timber-n.jpg"
+    ],
+    "hiSize": 4096,
+    "tile": 2.0
+  },
+  "window": {
+    "files": [
+      "window-1k.jpg",
+      "window-n-1k.jpg",
+      "window-r.jpg"
+    ],
+    "hi": [
+      "window.jpg",
+      "window-n.jpg"
+    ],
+    "hiSize": 2048
+  }
+}

@@ -5,7 +5,10 @@ const ROOT = __dirname;
 const dirs = ['css', 'fonts', 'icons', 'lib', 'src', 'src/skins', 'textures'];
 if (!fs.existsSync(path.join(ROOT, 'textures'))) fs.mkdirSync(path.join(ROOT, 'textures'));
 const files = ['index.html', 'manifest.webmanifest'];
-dirs.forEach(d => fs.readdirSync(path.join(ROOT, d)).sort().forEach(f => { if (fs.statSync(path.join(ROOT, d, f)).isFile()) files.push(d + '/' + f); }));
+// Full-resolution textures aren't fetched up front: they load (and are kept for offline use) the first time you come
+// within the detail bubble of them. Everything else is cached on install.
+const fullRes = f => /^textures\//.test(f) && /\.jpg$/.test(f) && !/-1k\.jpg$|-r\.jpg$/.test(f);
+dirs.forEach(d => fs.readdirSync(path.join(ROOT, d)).sort().forEach(f => { if (fs.statSync(path.join(ROOT, d, f)).isFile() && !fullRes(d + '/' + f)) files.push(d + '/' + f); }));
 const hash = crypto.createHash('sha256'); files.forEach(f => hash.update(f).update(fs.readFileSync(path.join(ROOT, f))));
 const version = hash.digest('hex').slice(0, 10);
 fs.writeFileSync(path.join(ROOT, 'sw.js'), `// Memory Palace offline cache (written by build.js). CACHE changes whenever an app file changes.
