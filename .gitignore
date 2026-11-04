@@ -1,0 +1,7 @@
+tests/shots/
+android/app/build/
+android/build/
+android/.gradle/
+*.keystore
+*keystore*.txt
+__pycache__/

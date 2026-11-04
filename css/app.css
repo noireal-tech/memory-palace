@@ -1,0 +1,25 @@
+@font-face { font-family: 'Bricolage Grotesque'; src: url('../fonts/bricolage-grotesque.woff2') format('woff2'); font-weight: 200 800; font-display: swap; }
+:root { --ink: #f4ead8; --dim: #c9bba1; --panel: rgba(27, 23, 18, 0.74); --line: rgba(244, 234, 216, 0.16); --gold: #d4ad55; --teal: #6cc9d4; --bg: #1b1712; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font: 16px/1.45 'Bricolage Grotesque', system-ui, sans-serif; overflow: hidden; }
+#scene { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+#scene:active { cursor: grabbing; }
+#card { position: fixed; left: max(16px, env(safe-area-inset-left)); bottom: max(16px, env(safe-area-inset-bottom)); width: min(400px, calc(100% - 32px));
+  padding: 20px 20px 18px; background: var(--panel); border: 1px solid var(--line); border-radius: 18px;
+  -webkit-backdrop-filter: blur(18px) saturate(140%); backdrop-filter: blur(18px) saturate(140%); box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35); }
+#card[hidden] { display: none; }
+.eyebrow { margin: 0 0 2px; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold); }
+h1 { margin: 0 0 6px; font-size: 32px; line-height: 1.05; font-weight: 700; letter-spacing: -0.02em; }
+#status { margin: 0 0 16px; color: var(--dim); font-size: 15px; min-height: 2.9em; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; }
+button { font: inherit; font-size: 16px; font-weight: 600; min-height: 46px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--line); background: rgba(244, 234, 216, 0.08); color: var(--ink); cursor: pointer; }
+button:hover { background: rgba(244, 234, 216, 0.14); }
+button:active { transform: scale(0.97); }
+button:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+button:disabled { opacity: 0.45; cursor: default; }
+#enter { background: var(--gold); border-color: var(--gold); color: var(--bg); flex: 1 1 100%; }
+#enter:hover { background: #e2bf6c; }
+.row button:not(#enter) { flex: 1 1 0; }
+.hint { margin: 12px 0 0; font-size: 13px; color: var(--dim); }
+#card.arriving .eyebrow::after { content: ' · through the ring'; color: var(--teal); }
+@media (prefers-reduced-transparency: reduce) { #card { background: var(--bg); backdrop-filter: none; -webkit-backdrop-filter: none; } }

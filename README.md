@@ -1,0 +1,49 @@
+# Memory Palace
+
+A memory palace you walk through in VR on Meta Quest: a castle of your own memories, with a room for every subject.
+Its own app, reached from [Endless Clay](https://noireal-tech.github.io/) through a ring portal and back.
+
+Live at **https://noireal-tech.github.io/memory-palace/** (installable; the Quest app is built from `android/`).
+
+## Privacy
+
+This code is public, generic and empty. Your palace plan and everything inside your palace stay on your headset
+(IndexedDB). Nothing about your palace is ever written to this repository.
+
+## How it's built
+
+Plain JavaScript, [three.js](https://threejs.org) r158 and WebXR; no build step beyond `node build.js`, which writes the
+offline cache list (`sw.js`).
+
+| File | What it does |
+| --- | --- |
+| `index.html` | The page. Its first script catches a VR session handed over by the portal before anything else loads. |
+| `src/util.js` | Noise, sliced work (so the headset keeps drawing), on-device storage. |
+| `src/textures.js` | Stone, plaster, timber, roof tiles, gravel, grass, water: painted in code, kept on the device after the first visit. |
+| `src/materials.js` | The material library. |
+| `src/render.js` | Renderer, sky, clouds, sunlight and sky light, batching, the frame loop, the VR session. |
+| `src/world.js` | Where you can stand and what blocks the way; geometry helpers. |
+| `src/site.js` | The platform, moat, causeway, stair, forecourt, streets, gardens and hills (the same under every skin). |
+| `src/nature.js` | Cherry trees, pines, shrubs, stone lanterns. |
+| `src/skins/pagoda.js` | The default exterior skin: a Japanese castle keep. Other skins plug in beside it. |
+| `src/links.js` | Going between this app and Endless Clay (an Android app link when installed, a page change in a browser). |
+| `src/player.js` | Walking, snap turning, the controllers, flat-screen controls. |
+| `src/portal.js` | The ring portal in the forecourt. |
+| `src/panel.js` | The hand panel above your left wrist. |
+| `src/app.js` | Start-up, the plan file, the page's card. |
+
+## Tests
+
+    python3 tests/shots.py      # loads it, reports draw cost, takes views into tests/shots/
+    python3 tests/grant.py      # VR hand-off from the portal (emulated Quest 3 via IWER)
+    python3 tests/trip.py ../endless-clay-app   # the portal round trip with Endless Clay
+
+## The Quest app
+
+`android/` is a Trusted Web Activity project (package `com.noirealtech.memorypalace`). The **Build Memory Palace APK**
+workflow builds and signs it; it needs the repository secrets `ANDROID_KEYSTORE_BASE64` and `ANDROID_KEYSTORE_PASSWORD`
+(the same key as Endless Clay). The site lists this app in `/.well-known/assetlinks.json`.
+
+## Licences
+
+three.js (MIT), Bricolage Grotesque (OFL): see `licenses/`. IWER (MIT, tests only): `tests/vendor/`.
