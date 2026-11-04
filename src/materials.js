@@ -8,17 +8,22 @@
     var m = std(Object.assign({ map: t.map, normalMap: t.normalMap, roughnessMap: t.roughnessMap, roughness: 1, envMapIntensity: 0.65 }, o || {}));
     m.userData.tile = tile; return m;
   }
+  // A photographic set says how many metres one copy covers; use that for world-mapped surfaces.
+  function tileOf(t, fallback) { return t && t.tile ? [t.tile, t.tile] : fallback; }
+  function repeat(t, r) { ['map', 'normalMap', 'roughnessMap'].forEach(function (k) { if (t[k]) t[k].repeat.set(r, r); }); }
   MP.makeMaterials = function (T) {
-    M.stone = tex(T.stone, [3.4, 3.4]);
-    M.paving = tex(T.paving, [6, 6]);
-    M.plaster = tex(T.plaster, [3, 3]);
-    M.trim = tex(T.plaster, [3, 3], { color: new THREE.Color('#fbf8f1') });           // white plastered eave edges
-    M.timber = tex(T.timber, [1.6, 1.6]);
-    M.eave = tex(T.timber, [1.2, 1.2], { color: new THREE.Color('#9a6a48') });         // rafters under the eaves
-    M.roof = tex(T.roof, [2.2, 2.2], { envMapIntensity: 1.1 }); M.roof.userData.tile = null; // roofs carry their own UVs
+    M.stone = tex(T.stone, tileOf(T.stone, [3.4, 3.4]));
+    M.paving = tex(T.paving, tileOf(T.paving, [6, 6]));
+    M.plaster = tex(T.plaster, tileOf(T.plaster, [3, 3]));
+    M.trim = tex(T.plaster, tileOf(T.plaster, [3, 3]), { color: new THREE.Color('#fbf8f1') });           // white plastered eave edges
+    M.timber = tex(T.timber, tileOf(T.timber, [1.6, 1.6]));
+    M.eave = tex(T.timber, [1.2, 1.2], { color: new THREE.Color(T.timber.photo ? '#c79a78' : '#9a6a48') }); // rafters under the eaves
+    if (T.roof.tile) repeat(T.roof, 2.2 / T.roof.tile);   // roof sheets are laid out at one copy per 2.2 m
+    M.roof = tex(T.roof, null, { envMapIntensity: 1.1 });
     M.ridge = tex(T.roof, [1.4, 1.4], { envMapIntensity: 1.1 });
-    M.gravel = tex(T.gravel, [3, 3]);
-    M.grass = tex(T.grass, [8, 8]); M.grass.userData.castShadow = false;
+    M.gravel = tex(T.gravel, tileOf(T.gravel, [3, 3]));
+    M.grass = tex(T.grass, tileOf(T.grass, [8, 8])); M.grass.userData.castShadow = false;
+    if (T.bark.photo) repeat(T.bark, 2);
     M.bark = tex(T.bark, null); M.bark.userData.tile = null;
     M.window = tex(T.window, null); M.window.userData.castShadow = false;
     M.gate = tex(T.gate, null); M.gate.userData.castShadow = false;
@@ -28,6 +33,9 @@
     M.bronze = std({ color: new THREE.Color('#6f5233'), metalness: 1, roughness: 0.38 });
     M.verdigris = std({ color: new THREE.Color('#5a9a86'), metalness: 0.35, roughness: 0.55 });
     M.leaf = std({ vertexColors: true, roughness: 0.82, envMapIntensity: 0.5 });
+    // tree crowns wear a foliage photo when there is one; the per-vertex colour then only shades it (darker beneath)
+    function foliage(t) { if (!t) return M.leaf; var m = std({ map: t.map, normalMap: t.normalMap, roughness: 0.85, vertexColors: true, envMapIntensity: 0.5 }); m.userData.photo = true; return m; }
+    M.blossom = foliage(T.blossom); M.needles = foliage(T.pine);
     M.hills = std({ vertexColors: true, roughness: 1, envMapIntensity: 0.4, side: THREE.DoubleSide }); M.hills.userData.castShadow = false; M.hills.userData.receiveShadow = false;
     T.water.normalMap.repeat.set(1, 1);
     M.water = std({ color: new THREE.Color('#14303a'), roughness: 0.04, metalness: 0.15, normalMap: T.water.normalMap, normalScale: new THREE.Vector2(0.3, 0.3), envMapIntensity: 1.3 });

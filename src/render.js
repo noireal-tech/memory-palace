@@ -59,7 +59,7 @@
 
   var sun = new THREE.DirectionalLight(0xffd6a6, 3.3);
   sun.position.copy(sunDir).multiplyScalar(160); sun.target.position.set(0, 0, 0);
-  sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+  sun.castShadow = true; sun.shadow.mapSize.set(4096, 4096); // drawn once (the sun never moves), so a sharp map costs nothing per frame
   var sc = sun.shadow.camera; sc.left = -82; sc.right = 82; sc.top = 82; sc.bottom = -82; sc.near = 30; sc.far = 360;
   sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.06;
   scene.add(sun, sun.target, new THREE.HemisphereLight(0xb8cbef, 0x4b3d2d, 0.14));

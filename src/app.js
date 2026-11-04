@@ -26,8 +26,8 @@
 
   // ---------- Building ----------
   async function build() {
-    var T = {}, names = MP.Tex.names;
-    for (var i = 0; i < names.length; i++) { R.status('Making materials… ' + Math.round(i / names.length * 100) + '%', true); T[names[i]] = await MP.Tex.make(names[i]); }
+    var T = {}, names = MP.Tex.names.concat(['blossom', 'pine']);
+    for (var i = 0; i < names.length; i++) { R.status('Preparing materials… ' + Math.round(i / names.length * 100) + '%', true); T[names[i]] = await MP.Tex.get(names[i]); }
     MP.makeMaterials(T);
     R.status('Raising the palace…', true); await MP.yieldFrame();
     var rnd = MP.rng(7);

@@ -5,3 +5,4 @@ android/.gradle/
 *.keystore
 *keystore*.txt
 __pycache__/
+tools/src-images/

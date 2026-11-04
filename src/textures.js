@@ -160,5 +160,34 @@
     }]
   };
   async function make(name) { var r = RECIPES[name]; return paint(name, r[0], r[1], r[2]); }
-  MP.Tex = { setRenderer: setRenderer, paint: paint, make: make, names: Object.keys(RECIPES), version: TEX_VERSION };
+
+  // ---------- Generated photographic materials (textures/, made from Runway images by tools/materials.py) ----------
+  // textures/index.json lists each set: { name: { tile: metres one copy covers, files: [colour, normal, roughness] } }.
+  // A set that's listed is loaded instead of painting the recipe of the same name.
+  var loader = new THREE.TextureLoader();
+  function loadTex(url, srgb) {
+    return new Promise(function (res, rej) {
+      loader.load(url, function (t) {
+        t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = maxAniso; t.generateMipmaps = true;
+        t.minFilter = THREE.LinearMipmapLinearFilter; t.magFilter = THREE.LinearFilter;
+        if (srgb) t.colorSpace = THREE.SRGBColorSpace;
+        res(t);
+      }, undefined, rej);
+    });
+  }
+  var index = null;
+  async function photoIndex() {
+    if (index) return index;
+    try { var r = await fetch('textures/index.json', { cache: 'no-cache' }); index = r.ok ? await r.json() : {}; } catch (e) { index = {}; }
+    if (MP.params.has('painted')) index = {}; // ?painted shows the code-painted look, for comparison
+    return index;
+  }
+  async function loadSet(name) {
+    var ix = await photoIndex(), e = ix[name]; if (!e) return null;
+    var f = e.files, out = await Promise.all([loadTex('textures/' + f[0], true), f[1] ? loadTex('textures/' + f[1], false) : null, f[2] ? loadTex('textures/' + f[2], false) : null]);
+    return { map: out[0], normalMap: out[1], roughnessMap: out[2], tile: e.tile || null, photo: true, roughLo: e.roughLo, roughHi: e.roughHi };
+  }
+  // A material set by name: the photographic one if present, otherwise painted here.
+  async function get(name) { var s = await loadSet(name); return s || (RECIPES[name] ? make(name) : null); }
+  MP.Tex = { setRenderer: setRenderer, paint: paint, make: make, get: get, photoIndex: photoIndex, names: Object.keys(RECIPES), version: TEX_VERSION };
 })();

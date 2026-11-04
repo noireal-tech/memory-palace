@@ -2,7 +2,8 @@
 // arrives on the next launch. Run after changing any app file: node build.js
 const fs = require('fs'), path = require('path'), crypto = require('crypto');
 const ROOT = __dirname;
-const dirs = ['css', 'fonts', 'icons', 'lib', 'src', 'src/skins'];
+const dirs = ['css', 'fonts', 'icons', 'lib', 'src', 'src/skins', 'textures'];
+if (!fs.existsSync(path.join(ROOT, 'textures'))) fs.mkdirSync(path.join(ROOT, 'textures'));
 const files = ['index.html', 'manifest.webmanifest'];
 dirs.forEach(d => fs.readdirSync(path.join(ROOT, d)).sort().forEach(f => { if (fs.statSync(path.join(ROOT, d, f)).isFile()) files.push(d + '/' + f); }));
 const hash = crypto.createHash('sha256'); files.forEach(f => hash.update(f).update(fs.readFileSync(path.join(ROOT, f))));
