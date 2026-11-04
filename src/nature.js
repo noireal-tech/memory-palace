@@ -1,7 +1,7 @@
 /* Memory Palace: trees, shrubs and stone lanterns. Crowns are lumpy blobs coloured per vertex, merged into batches. */
 (function () {
   'use strict';
-  var MP = window.MP, G = MP.Geo, N = MP.Nature = {};
+  var MP = window.MP, G = MP.Geo, N = MP.Nature = { trees: [] }; // trees: where each one stands (for their sounds)
 
   // A crown cluster: a sphere pushed in and out by noise, darker underneath and inside, lighter on top.
   function blob(b, c, r, dark, light, seed, mat) {
@@ -22,6 +22,7 @@
 
   // Cherry in blossom: a short trunk forking into spreading limbs, each ending in clouds of pink.
   N.cherry = function (b, x, y, z, s, rnd) {
+    N.trees.push({ kind: 'cherry', x: x, y: y + 4 * s, z: z });
     var dark = [0.5, 0.22, 0.3], light = [1.0, 0.8, 0.86], top = [x + 0.2 * s, y + 2.0 * s, z];
     G.limb(b, MP.M.bark, [x, y - 0.3, z], top, 0.3 * s, 0.2 * s, 9);
     for (var k = 0; k < 5; k++) {
@@ -34,6 +35,7 @@
   };
   // Japanese black pine, cloud-pruned: a leaning trunk with flat pads of needles.
   N.pine = function (b, x, y, z, s, rnd) {
+    N.trees.push({ kind: 'pine', x: x, y: y + 6 * s, z: z });
     var dark = [0.025, 0.06, 0.035], light = [0.13, 0.24, 0.11], lean = (rnd() - 0.5) * 1.8 * s, h = 7.5 * s;
     G.limb(b, MP.M.bark, [x, y - 0.3, z], [x + lean, y + h, z], 0.42 * s, 0.15 * s, 9);
     for (var k = 0; k < 5; k++) {

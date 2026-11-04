@@ -34,7 +34,7 @@
     MP.SITE.build(groups.site, rnd); await MP.yieldFrame();
     var skin = MP.Skins[MP.params.get('skin') || 'pagoda'] || MP.Skins.pagoda;
     skin.keep(groups.keep); await MP.yieldFrame();
-    MP.Portal.build(groups.site); await MP.yieldFrame();
+    MP.Portal.build(groups.site); MP.Sound.build(groups.site); await MP.yieldFrame();
     // prepare every material's shaders before the first full frame, in the background where the browser allows it
     R.status('Lighting the palace…', true);
     try { if (R.renderer.compileAsync) await R.renderer.compileAsync(R.scene, R.camera); else R.renderer.compile(R.scene, R.camera); } catch (e) { MP.log('compile', e); }
@@ -76,6 +76,6 @@
     place: function (x, y, z, hold) { R.rig.position.set(x, y, z); P.hold = !!hold; MP.Portal.reset(); },
     look: function (yaw, pitch) { P.flatYaw = yaw; P.flatPitch = pitch; R.rig.rotation.y = yaw; R.camera.rotation.set(pitch, 0, 0); },
     walk: function (n, f, s) { for (var i = 0; i < n; i++) { P.move(1 / 60, f, s || 0); MP.Portal.check(); } return R.rig.position.toArray(); },
-    lastLink: function () { return MP.lastLink || null; }, detail: function () { MP.Detail.update(true); return MP.Detail.report(); }
+    lastLink: function () { return MP.lastLink || null; }, detail: function () { MP.Detail.update(true); return MP.Detail.report(); }, sound: function () { return MP.Sound.debug(); }
   };
 })();

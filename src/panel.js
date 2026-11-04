@@ -3,7 +3,7 @@
 (function () {
   'use strict';
   var MP = window.MP, R = MP.R, P = MP.Player;
-  var W = 640, H = 420, canvas = document.createElement('canvas'); canvas.width = W; canvas.height = H;
+  var W = 640, H = 540, canvas = document.createElement('canvas'); canvas.width = W; canvas.height = H;
   var tex = new THREE.CanvasTexture(canvas); tex.colorSpace = THREE.SRGBColorSpace;
   var board = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.2 * H / W), new THREE.MeshBasicMaterial({ map: tex, transparent: true, toneMapped: false, fog: false }));
   board.position.set(0, 0.075, -0.02); board.rotation.x = -0.75; board.visible = false;
@@ -18,7 +18,8 @@
   function layout() {
     buttons = [
       { label: 'Endless Clay', sub: 'Travel through the portal', run: function () { MP.Portal.travel(); }, x: 28, y: 150, w: W - 56, h: 104 },
-      { label: 'Back to the forecourt', sub: 'Stand in front of the keep', run: function () { MP.arrive(); }, x: 28, y: 270, w: W - 56, h: 104 }
+      { label: 'Back to the forecourt', sub: 'Stand in front of the keep', run: function () { MP.arrive(); }, x: 28, y: 270, w: W - 56, h: 104 },
+      { label: 'Sound', sub: '', run: function () { MP.Sound.toggle(); }, x: 28, y: 390, w: W - 56, h: 104 }
     ];
   }
   function draw() {
@@ -29,7 +30,8 @@
     buttons.forEach(function (bt, i) {
       g.fillStyle = i === hover ? '#d4ad55' : 'rgba(244, 234, 216, 0.1)'; g.beginPath(); if (g.roundRect) g.roundRect(bt.x, bt.y, bt.w, bt.h, 20); else g.rect(bt.x, bt.y, bt.w, bt.h); g.fill();
       g.fillStyle = i === hover ? '#1b1712' : '#f4ead8'; g.font = '700 36px ' + F; g.fillText(bt.label, bt.x + 24, bt.y + 48);
-      g.globalAlpha = 0.75; g.font = '500 24px ' + F; g.fillText(bt.sub, bt.x + 24, bt.y + 84); g.globalAlpha = 1;
+      var sub = bt.label === 'Sound' ? (MP.Sound && MP.Sound.on ? 'On: wind, chimes and water around you' : 'Off') : bt.sub;
+      g.globalAlpha = 0.75; g.font = '500 24px ' + F; g.fillText(sub, bt.x + 24, bt.y + 84); g.globalAlpha = 1;
     });
     tex.needsUpdate = true;
   }
@@ -60,7 +62,8 @@
   });
   P.onSelect = function (rec) {
     if (MP.awaitTrigger) { MP.awaitTrigger = false; MP.Links.go('clay', 'via=palace'); return; }
-    if (rec.hand === 'right' && hover >= 0) { var bt = buttons[hover]; bt.run(); }
+    if (MP.Sound) MP.Sound.wake(); // a trigger pull lets sound start
+    if (rec.hand === 'right' && hover >= 0) { var bt = buttons[hover]; bt.run(); draw(); }
   };
   MP.Panel = { say: function (t) { note = t; draw(); }, buttons: function () { return buttons; }, press: function (i) { buttons[i].run(); } };
 })();

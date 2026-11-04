@@ -30,6 +30,7 @@ offline cache list (`sw.js`).
 | `src/links.js` | Going between this app and Endless Clay (an Android app link when installed, a page change in a browser). |
 | `src/player.js` | Walking, snap turning, the controllers, flat-screen controls. |
 | `src/portal.js` | The ring portal in the forecourt. |
+| `src/sound.js` | Spatial sound, all made live: wind, wind chimes at the front door, moat water, the portal's hum, rustling leaves in the nearest trees, evening cicadas, a bush warbler, footsteps that know the ground. |
 | `src/panel.js` | The hand panel above your left wrist. |
 | `src/app.js` | Start-up, the plan file, the page's card. |
 
@@ -39,6 +40,7 @@ offline cache list (`sw.js`).
     python3 tests/grant.py      # VR hand-off from the portal (emulated Quest 3 via IWER)
     python3 tests/trip.py ../endless-clay-app   # the portal round trip with Endless Clay
     python3 tests/detail.py     # the 25 m detail bubble (full resolution only near you)
+    python3 tests/sound.py      # spatial sound: starts on a click, chimes, cicadas, footsteps, the Sound switch
 
 ## The Quest app
 
