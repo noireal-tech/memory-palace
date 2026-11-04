@@ -31,7 +31,10 @@ offline cache list (`sw.js`).
 | `src/player.js` | Walking, snap turning, the controllers, flat-screen controls. |
 | `src/portal.js` | The ring portal in the forecourt. |
 | `src/sound.js` | Spatial sound, all made live: wind, wind chimes at the front door, moat water, the portal's hum, rustling leaves in the nearest trees, evening cicadas, a bush warbler, footsteps that know the ground. |
-| `src/panel.js` | The hand panel above your left wrist. |
+| `src/interact.js` | Pointing at things in the world (doors, plaques): the right controller's ray and trigger, or a click. |
+| `src/rooms.js` | Your rooms from outside: facade modules on the band and row grid, band colours and window shapes, brass plaques, the active tier, doors that stay as you leave them, placeholder rooms furnished only while you're near. |
+| `src/naming.js` | Naming rooms: the panel keyboard, speech where the browser supports it, a text box on a flat screen. |
+| `src/panel.js` | The hand panel above your left wrist: washi paper in a bamboo frame, brush lettering, Go / Make / Settings faces flipped by tab or by pointing and pushing the stick. |
 | `src/app.js` | Start-up, the plan file, the page's card. |
 
 ## Tests
@@ -41,6 +44,7 @@ offline cache list (`sw.js`).
     python3 tests/trip.py ../endless-clay-app   # the portal round trip with Endless Clay
     python3 tests/detail.py     # the 25 m detail bubble (full resolution only near you)
     python3 tests/sound.py      # spatial sound: starts on a click, chimes, cicadas, footsteps, the Sound switch
+    python3 tests/rooms.py      # room facades, doors, placeholder rooms, naming, the active tier, panel faces
 
 ## The Quest app
 
@@ -50,4 +54,4 @@ workflow builds and signs it; it needs the repository secrets `ANDROID_KEYSTORE_
 
 ## Licences
 
-three.js (MIT), Bricolage Grotesque (OFL): see `licenses/`. IWER (MIT, tests only): `tests/vendor/`.
+three.js (MIT), Bricolage Grotesque and Kaushan Script (OFL): see `licenses/`. IWER (MIT, tests only): `tests/vendor/`.

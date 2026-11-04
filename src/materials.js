@@ -29,6 +29,12 @@
     M.window = tex(T.window, null); M.window.userData.castShadow = false;
     M.gate = tex(T.gate, null); M.gate.userData.castShadow = false;
     M.shoji = tex(T.shoji, null, { emissive: new THREE.Color(1, 0.8, 0.52), emissiveMap: T.shoji.map, emissiveIntensity: 0.22 }); M.shoji.userData.castShadow = false;
+    M.doorLeaf = tex(T.gate, null); M.doorLeaf.userData.castShadow = false;
+    M.shutter = tex(T.timber, [1.2, 1.2], { color: new THREE.Color('#8a7a6c') }); M.shutter.userData.tile = null;
+    M.brass = std({ color: new THREE.Color('#c79a4b'), metalness: 0.9, roughness: 0.35 });
+    // lit from within: the placeholder rooms' surfaces glow softly so they read as lamp-lit, without real lights
+    M.inWall = tex(T.plaster, tileOf(T.plaster, [3, 3]), { color: new THREE.Color('#e9e1d2'), emissive: new THREE.Color('#5a4a38'), emissiveMap: T.plaster.map, emissiveIntensity: 0.55 });
+    M.inFloor = tex(T.paving, tileOf(T.paving, [6, 6]), { color: new THREE.Color('#e6d6bc'), emissive: new THREE.Color('#6e5a42'), emissiveMap: T.paving.map, emissiveIntensity: 0.6, envMapIntensity: 0.3 }); // a pale stone floor
     M.gold = std({ color: new THREE.Color('#d8b25a'), metalness: 1, roughness: 0.3 });
     M.goldLeaf = std({ color: new THREE.Color('#c9a24a'), metalness: 0.85, roughness: 0.42, envMapIntensity: 1.2 });
     M.bronze = std({ color: new THREE.Color('#6f5233'), metalness: 1, roughness: 0.38 });

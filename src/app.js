@@ -11,18 +11,20 @@
   // ---------- Your plan: picked from a file you keep, stored only on this device ----------
   MP.Plan = {
     data: null,
+    save: function () { return MP.Plan.data ? MP.store.set('plan', MP.Plan.data) : Promise.resolve(); },
     load: function () { return MP.store.get('plan').then(function (p) { MP.Plan.data = p || null; return MP.Plan.data; }); },
     importText: function (text) {
       var o = JSON.parse(text), rooms = o && o.rooms;
       if (!Array.isArray(rooms) || !rooms.length) throw new Error('no rooms');
-      var clean = rooms.map(function (r) { return { address: String(r.address || ''), name: r.name ? String(r.name) : '', wall: r.wall || null, accent: r.accent || null }; })
+      var clean = rooms.map(function (r) { return { address: String(r.address || ''), name: r.name ? String(r.name).slice(0, 48) : '', wall: r.wall || null, accent: r.accent || null, active: !!r.active, wasActive: !!(r.wasActive || r.active) }; })
         .filter(function (r) { return /^(W2|W1|C|E1|E2)\.(W|E)\.(N|S)\d+$/.test(r.address); });
       if (!clean.length) throw new Error('no valid addresses');
       var plan = { v: 1, rooms: clean, at: Date.now() };
       return MP.store.set('plan', plan).then(function () { MP.Plan.data = plan; return plan; });
     }
   };
-  function planNote() { var p = MP.Plan.data; return p ? 'Your plan: ' + p.rooms.length + ' rooms, kept on this headset only.' : 'No plan yet. Open your palace plan to add your rooms.'; }
+  function roomsText() { var n = MP.Plan.data ? MP.Plan.data.rooms.length : 0; return n + (n === 1 ? ' room' : ' rooms') + ' in your plan'; }
+  function planNote() { var p = MP.Plan.data; return p ? 'Your plan: ' + p.rooms.length + (p.rooms.length === 1 ? ' room' : ' rooms') + ', kept on this headset only.' : 'No plan yet. Open your palace plan to add your rooms.'; }
 
   // ---------- Building ----------
   async function build() {
@@ -35,14 +37,14 @@
     var skin = MP.Skins[MP.params.get('skin') || 'pagoda'] || MP.Skins.pagoda;
     skin.keep(groups.keep); await MP.yieldFrame();
     MP.Portal.build(groups.site); MP.Sound.build(groups.site); await MP.yieldFrame();
+    R.scene.add(MP.Rooms.group); await MP.Plan.load(); await MP.Rooms.load(); R.status('Raising your rooms…', true); MP.Rooms.build(); await MP.yieldFrame();
     // prepare every material's shaders before the first full frame, in the background where the browser allows it
     R.status('Lighting the palace…', true);
     try { if (R.renderer.compileAsync) await R.renderer.compileAsync(R.scene, R.camera); else R.renderer.compile(R.scene, R.camera); } catch (e) { MP.log('compile', e); }
     R.refreshShadows();
-    await MP.Plan.load();
     MP.ready = true; P.enabled = true;
     R.status(planNote(), false);
-    MP.Panel.say(MP.Plan.data ? 'Forecourt · ' + MP.Plan.data.rooms.length + ' rooms in your plan' : 'Forecourt');
+    MP.Panel.say(MP.Plan.data ? 'Forecourt · ' + roomsText() : 'Forecourt');
   }
 
   // ---------- The page's card ----------
@@ -54,7 +56,7 @@
   $('#planBtn').addEventListener('click', function () { $('#planFile').click(); });
   $('#planFile').addEventListener('change', async function (e) {
     var f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f) return;
-    try { await MP.Plan.importText(await f.text()); R.status(planNote(), false); MP.Panel.say('Forecourt · ' + MP.Plan.data.rooms.length + ' rooms in your plan'); }
+    try { await MP.Plan.importText(await f.text()); MP.Rooms.build(); R.status(planNote(), false); MP.Panel.say('Forecourt · ' + roomsText()); }
     catch (err) { R.status('That file isn’t a palace plan.', false); }
   });
   R.onSession('start', function () { $('#card').hidden = true; });

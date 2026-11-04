@@ -1,3 +1,4 @@
+@font-face { font-family: 'Kaushan Script'; src: url('../fonts/kaushan-script.woff2') format('woff2'); font-display: swap; }
 @font-face { font-family: 'Bricolage Grotesque'; src: url('../fonts/bricolage-grotesque.woff2') format('woff2'); font-weight: 200 800; font-display: swap; }
 :root { --ink: #f4ead8; --dim: #c9bba1; --panel: rgba(27, 23, 18, 0.74); --line: rgba(244, 234, 216, 0.16); --gold: #d4ad55; --teal: #6cc9d4; --bg: #1b1712; }
 * { box-sizing: border-box; }
@@ -23,3 +24,12 @@ button:disabled { opacity: 0.45; cursor: default; }
 .hint { margin: 12px 0 0; font-size: 13px; color: var(--dim); }
 #card.arriving .eyebrow::after { content: ' · through the ring'; color: var(--teal); }
 @media (prefers-reduced-transparency: reduce) { #card { background: var(--bg); backdrop-filter: none; -webkit-backdrop-filter: none; } }
+#nameBox { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(420px, calc(100% - 32px)); padding: 22px; border-radius: 16px;
+  background: #f2e8d2; color: #1f1a14; border: 10px solid #c2a95c; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45); font-family: 'Kaushan Script', cursive; }
+#nameBox[hidden] { display: none; }
+#nameBox label { display: block; font-size: 28px; margin-bottom: 10px; }
+#nameBox input { width: 100%; font: 26px 'Kaushan Script', cursive; padding: 8px 12px; border: 2px solid rgba(31, 26, 20, 0.4); border-radius: 10px; background: #fbf5e6; color: #1f1a14; }
+#nameBox input:focus-visible { outline: 3px solid #a8342a; outline-offset: 2px; }
+#nameBox .addr { margin: 8px 0 14px; font: 14px 'Bricolage Grotesque', system-ui, sans-serif; color: #5a4a38; }
+#nameBox button { font-family: 'Kaushan Script', cursive; font-size: 22px; color: #1f1a14; background: transparent; border: 2px solid rgba(31, 26, 20, 0.5); }
+#nameBox #nameSave { background: #1f1a14; color: #f2e8d2; }

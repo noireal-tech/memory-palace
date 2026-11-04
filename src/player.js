@@ -57,7 +57,8 @@
     pads.forEach(function (p) {
       var gp = p.src && p.src.gamepad; if (!gp) return; var ax = gp.axes, sx = ax[2] || 0, sy = ax[3] || 0;
       if (p.hand === 'left') { if (Math.hypot(sx, sy) > 0.15) { f = -sy; s = sx; } }
-      else if (p.hand === 'right') { if (Math.abs(sx) > 0.7 && p.snapReady) { P.turn(sx > 0 ? -Math.PI / 6 : Math.PI / 6); p.snapReady = false; } if (Math.abs(sx) < 0.3) p.snapReady = true; }
+      else if (p.hand === 'right') { if (MP.Panel && MP.Panel.pointing()) return; // pointing at the panel: the stick flips its faces
+        if (Math.abs(sx) > 0.7 && p.snapReady) { P.turn(sx > 0 ? -Math.PI / 6 : Math.PI / 6); p.snapReady = false; } if (Math.abs(sx) < 0.3) p.snapReady = true; }
     });
     P.move(dt, f, s);
   }
