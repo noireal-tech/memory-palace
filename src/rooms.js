@@ -2,18 +2,27 @@
    in the skin's style: walls in its band's colour, windows whose shape shifts across the palace (round on the feeling
    side in the west, through arched, the castle's barred windows in the middle and softened squares, to sharp squares
    on the logic side in the east), a brass plaque over its street door with the name you give it, and a third tier
-   while its subject is active (shuttered once it goes dormant; rooms never disappear).
+   while its subject is active (shuttered once it goes dormant; rooms never disappear). With no plan yet, sixteen
+   unnamed rooms stand in the five bands (STARTER), ready to be named.
+   Levels of detail: only the room you're at (the one you're in, else the nearest within FOCUS_R) and its neighbours
+   on the grid (across the street, the next row, across the garden) wear the full facade: framed door that swings,
+   brass plaque, finely curved roofs. Every other room is a lightweight placeholder with the same pagoda outline,
+   band colour and windows, all of them merged into a few draws. As you walk, the new full facades are built a few
+   at a time out of sight and swapped in together. Where you can walk never changes with the detail.
    Street doors open and close when you point and pull the trigger (or click) and stay as you leave them. Until a
-   room's interior is built (a later step), its door opens onto a simple placeholder room, furnished only while you're
-   near (the same bubble idea as the textures). */
+   room's interior is built (a later step), its door opens onto a simple placeholder room, furnished as you approach
+   the room (the same bubble idea as the textures) and cleared once you've left. */
 (function () {
   'use strict';
   var MP = window.MP, R = MP.R, G = MP.Geo, W = MP.World;
   var BANDS = { W2: -48, W1: -24, C: 0, E1: 24, E2: 48 };
   var WALL = { W2: '#b0603a', W1: '#d9b8a2', C: '#ede8dd', E1: '#a9b6c4', E2: '#2f4a6b' }; // fired clay, pale clay, lime plaster, pale slate, indigo slate
   var SHAPE = { W2: 'round', W1: 'arched', C: 'bars', E1: 'soft', E2: 'square' };
-  var NEAR = 25, FAR = 32;
-  var Rm = MP.Rooms = { list: [], group: new THREE.Group(), batch: null };
+  var NEAR = 15, FAR = 32, FOCUS_R = 16, NEIGHBOUR_R = 14.5;
+  var Rm = MP.Rooms = { list: [], group: new THREE.Group(), liteBatch: null };
+  // sixteen rooms, mirrored across the palace's north-south axis: three in each outer band, four in the centre
+  Rm.STARTER = ['W2.W.N1', 'W2.E.N1', 'W2.W.S1', 'W1.W.N1', 'W1.E.N1', 'W1.W.S1', 'C.W.N2', 'C.E.N2', 'C.W.N3', 'C.E.N3',
+    'E1.W.N1', 'E1.E.N1', 'E1.E.S1', 'E2.W.N1', 'E2.E.N1', 'E2.E.S1'];
   var BRUSH = '"Kaushan Script", "Bricolage Grotesque", cursive', SANS = '"Bricolage Grotesque", system-ui, sans-serif';
 
   // ---------- Where a room stands ----------
@@ -71,33 +80,105 @@
   }
 
   // ---------- Building the facades ----------
-  var doorState = {};
+  var doorState = {}, skin = null, focus = null;
+  function spec(rm, group) {
+    var L = rm.L;
+    return { r: L.r, street: L.street, zc: L.zc, wall: rm.wall, win: windowMat(rm.shape), winAspect: rm.shape === 'arched' ? 1.25 : 1, addr: rm.address,
+      tier: rm.active ? 'active' : rm.wasActive ? 'shuttered' : 'none', group: group || null, plaqueMat: rm.plaqueMat, open: rm.open };
+  }
   Rm.build = function () {
     // clear what was there
-    if (Rm.batch) Rm.batch.clear();
-    Rm.list.forEach(function (rm) { if (rm.dyn) { Rm.group.remove(rm.dyn); } dropInterior(rm); (rm.targets || []).forEach(MP.Interact.remove); W.drop('room:' + rm.address); W.drop('room:' + rm.address + ':door'); });
-    Rm.list = [];
+    Rm.list.forEach(function (rm) { dropFull(rm); dropInterior(rm); forgetLite(rm); Rm.group.remove(rm.dyn); W.drop('room:' + rm.address); W.drop('room:' + rm.address + ':door'); });
+    if (Rm.liteBatch) { Rm.liteBatch.clear(); Rm.liteBatch = null; }
+    Rm.list = []; focus = null;
     var plan = MP.Plan.data; if (!plan) return;
-    var skin = MP.Skins[MP.params.get('skin') || 'pagoda'] || MP.Skins.pagoda, b = new R.Batch(Rm.group);
+    skin = MP.Skins[MP.params.get('skin') || 'pagoda'] || MP.Skins.pagoda;
     var seen = {};
     plan.rooms.forEach(function (rec) {
       var L = layout(rec.address); if (!L || seen[rec.address]) return; seen[rec.address] = true;
-      var rm = { address: rec.address, rec: rec, name: rec.name || '', active: !!rec.active, wasActive: !!rec.wasActive, L: L, dyn: new THREE.Group() };
+      var rm = { address: rec.address, rec: rec, name: rec.name || '', active: !!rec.active, wasActive: !!rec.wasActive, L: L, dyn: new THREE.Group(), full: null, targets: [],
+        wall: wallMat(rec.wall || WALL[L.band]), shape: SHAPE[L.band], centre: [(L.r[0] + L.r[2]) / 2, L.zc] };
       Rm.group.add(rm.dyn);
-      var wall = wallMat(rec.wall || WALL[L.band]), shape = SHAPE[L.band];
       rm.plaqueMat = new THREE.MeshStandardMaterial({ map: plaqueTexture(rm), metalness: 0.75, roughness: 0.38 });
-      var built = skin.module(b, { r: L.r, street: L.street, zc: L.zc, wall: wall, win: windowMat(shape), winAspect: shape === 'arched' ? 1.25 : 1, addr: rec.address,
-        tier: rm.active ? 'active' : rm.wasActive ? 'shuttered' : 'none', group: rm.dyn, plaqueMat: rm.plaqueMat });
-      rm.leaves = built.leaves; rm.plaque = built.plaque; rm.inner = built.inner; rm.door = built.door;
-      rm.open = !!doorState[rec.address]; rm.angle = rm.open ? 1 : 0; setLeaves(rm);
-      if (rm.open) W.drop('room:' + rm.address + ':door');
-      rm.targets = rm.leaves.map(function (pv) { return MP.Interact.add(pv, { use: function () { Rm.toggleDoor(rm.address); }, label: 'door ' + rm.address }); });
-      rm.targets.push(MP.Interact.add(rm.plaque, { use: function () { if (MP.Naming) MP.Naming.start(rm); }, label: 'plaque ' + rm.address }));
+      rm.open = !!doorState[rec.address]; rm.angle = rm.open ? 1 : 0;
+      var c = skin.collide(spec(rm), 'room:' + rec.address); rm.inner = c.inner; rm.door = c.door;
       Rm.list.push(rm);
     });
-    b.flush(); Rm.batch = b;
-    R.refreshShadows();
+    // neighbours on the grid: across the street (12 m), the next row (10 m), across the garden (12 m), across the spine (14 m)
+    Rm.list.forEach(function (rm) { rm.near = Rm.list.filter(function (o) { return o !== rm && Math.hypot(o.centre[0] - rm.centre[0], o.centre[1] - rm.centre[1]) <= NEIGHBOUR_R; }); });
+    Rm.settle();
   };
+
+  // ---------- Levels of detail ----------
+  function rectDist(r, p) { var dx = Math.max(r[0] - p.x, 0, p.x - r[2]), dz = Math.max(r[1] - p.z, 0, p.z - r[3]); return Math.hypot(dx, dz); }
+  // the room you're at: the one you're in, else the nearest within FOCUS_R (kept unless another is clearly nearer)
+  function pickFocus() {
+    MP.Player.head(head); var best = null, bd = Infinity;
+    for (var i = 0; i < Rm.list.length; i++) { var d = rectDist(Rm.list[i].L.r, head); if (d < bd) { bd = d; best = Rm.list[i]; } }
+    if (focus && Rm.list.indexOf(focus) >= 0) {
+      var fd = rectDist(focus.L.r, head);
+      if (fd <= FOCUS_R + 2 && fd <= bd + 2 && !(bd === 0 && fd > 0)) return focus; // stepping into another room always moves it
+    }
+    focus = bd <= FOCUS_R ? best : null; return focus;
+  }
+  function wanted() { var f = pickFocus(), set = new Set(); if (f) { set.add(f); f.near.forEach(function (n) { set.add(n); }); } return set; }
+  // build a room's full facade, hidden until it's swapped in
+  Rm.stats = { builds: 0, maxBuildMs: 0, swaps: 0 };
+  function makeFull(rm) {
+    var t0 = performance.now(), g = new THREE.Group(), b = new R.Batch(g), built = skin.module(b, spec(rm, g)); b.flush();
+    Rm.stats.builds++; Rm.stats.maxBuildMs = Math.max(Rm.stats.maxBuildMs, Math.round((performance.now() - t0) * 10) / 10);
+    g.visible = false; rm.dyn.add(g);
+    rm.full = { group: g, batch: b, leaves: built.leaves, plaque: built.plaque, shown: false };
+    setLeaves(rm);
+  }
+  function showFull(rm) {
+    rm.full.group.visible = true; rm.full.shown = true;
+    rm.targets = rm.full.leaves.map(function (pv) { return MP.Interact.add(pv, { use: function () { Rm.toggleDoor(rm.address); }, label: 'door ' + rm.address }); });
+    rm.targets.push(MP.Interact.add(rm.full.plaque, { use: function () { if (MP.Naming) MP.Naming.start(rm); }, label: 'plaque ' + rm.address }));
+  }
+  function dropFull(rm) {
+    if (!rm.full) return;
+    rm.targets.forEach(MP.Interact.remove); rm.targets = [];
+    rm.full.batch.clear(); rm.dyn.remove(rm.full.group);
+    rm.full.group.traverse(function (o) { if (o.isMesh) o.geometry.dispose(); }); // the leaves, plaque and its plate (materials are shared)
+    rm.full = null;
+  }
+  // every room not in full detail, as placeholders merged into one batch. Each room's pieces are made once (again
+  // only if its door changes) and kept, so a swap only stitches arrays together.
+  function liteParts(rm) {
+    if (rm.lite && rm.lite.open === rm.open) return rm.lite;
+    forgetLite(rm);
+    var c = new R.Batch(null); skin.lite(c, spec(rm));
+    return (rm.lite = { open: rm.open, lists: c.lists, notes: c.notes });
+  }
+  function forgetLite(rm) { if (rm.lite) { if (MP.Detail && MP.Detail.forget) MP.Detail.forget(rm.lite.notes); rm.lite = null; } }
+  function rebuildLite() {
+    if (Rm.liteBatch) Rm.liteBatch.clear();
+    var b = new R.Batch(Rm.group); b.keep = true;
+    Rm.list.forEach(function (rm) {
+      if (rm.full && rm.full.shown) return;
+      liteParts(rm).lists.forEach(function (list, mat) { if (!b.lists.has(mat)) b.lists.set(mat, []); Array.prototype.push.apply(b.lists.get(mat), list); });
+    });
+    b.flush(); Rm.liteBatch = b;
+  }
+  // One step toward the detail you should see: drop staged facades no longer wanted, build missing ones (nearest
+  // first, within a few milliseconds), and once all are ready swap them in together with the placeholders rebuilt.
+  // sync: do it all now. Returns true when settled.
+  function lod(sync) {
+    if (!skin) return true;
+    var want = wanted(), t0 = performance.now();
+    Rm.list.forEach(function (rm) { if (rm.full && !rm.full.shown && !want.has(rm)) dropFull(rm); });
+    var missing = Rm.list.filter(function (rm) { return want.has(rm) && !rm.full; });
+    missing.sort(function (a, b) { return rectDist(a.L.r, head) - rectDist(b.L.r, head); });
+    for (var i = 0; i < missing.length; i++) { if (!sync && i > 0 && performance.now() - t0 > 6) return false; makeFull(missing[i]); }
+    var swap = Rm.list.some(function (rm) { return (rm.full && !rm.full.shown) || (rm.full && !want.has(rm)); });
+    if (!swap && Rm.liteBatch) return true;
+    Rm.list.forEach(function (rm) { if (rm.full && !want.has(rm)) { dropFull(rm); dropInterior(rm); } else if (rm.full && !rm.full.shown) showFull(rm); });
+    var t1 = performance.now(); rebuildLite(); R.refreshShadows(); Rm.stats.swaps++; Rm.stats.liteMs = Math.round((performance.now() - t1) * 10) / 10;
+    return true;
+  }
+  Rm.settle = function () { return lod(true); };
+
   var wallMats = {};
   function wallMat(hex) {
     if (wallMats[hex]) return wallMats[hex];
@@ -109,16 +190,18 @@
 
   // ---------- Doors ----------
   function setLeaves(rm) {
+    if (!rm.full) return;
     var e = rm.angle < 0.5 ? 2 * rm.angle * rm.angle : 1 - Math.pow(-2 * rm.angle + 2, 2) / 2; // ease in and out
-    rm.leaves.forEach(function (pv) { pv.rotation.y = pv.userData.out * pv.userData.side * e * THREE.MathUtils.degToRad(100); });
+    rm.full.leaves.forEach(function (pv) { pv.rotation.y = pv.userData.out * pv.userData.side * e * THREE.MathUtils.degToRad(100); });
   }
   Rm.toggleDoor = function (addr) {
     var rm = Rm.find(addr); if (!rm) return;
     rm.open = !rm.open; doorState[addr] = rm.open; MP.store.set('doors', doorState);
     if (rm.open) W.drop('room:' + addr + ':door');
-    else W.solid(Math.min(rm.door.x, rm.door.x - rm.door.out * 0.3), rm.door.z - rm.door.w / 2, Math.max(rm.door.x, rm.door.x - rm.door.out * 0.3), rm.door.z + rm.door.w / 2, 30, 'room:' + addr + ':door');
+    else skin.doorSolid(spec(rm), 'room:' + addr + ':door');
     if (MP.Sound && MP.Sound.door) MP.Sound.door(rm.door, rm.open);
-    if (rm.open) ensureInterior(rm);
+    if (!rm.full || !rm.full.shown) { rm.angle = rm.open ? 1 : 0; rebuildLite(); } // a far door: the placeholder shows it open or shut
+    else if (rm.open) ensureInterior(rm);
     return rm.open;
   };
   Rm.find = function (addr) { for (var i = 0; i < Rm.list.length; i++) if (Rm.list[i].address === addr) return Rm.list[i]; return null; };
@@ -163,20 +246,21 @@
     rm.dyn.remove(rm.interior.group); rm.interior.batch.clear(); rm.interior.scroll.geometry.dispose(); rm.interior.scroll.material.map.dispose(); rm.interior.scroll.material.dispose();
     rm.interior = null;
   }
-  var acc = 0, head = new THREE.Vector3();
+  var acc = 0, busy = false, head = new THREE.Vector3();
   R.onFrame(function (dt) {
     // doors swing
     Rm.list.forEach(function (rm) {
       var target = rm.open ? 1 : 0; if (rm.angle === target) return;
       rm.angle = target > rm.angle ? Math.min(1, rm.angle + dt / 0.9) : Math.max(0, rm.angle - dt / 0.9); setLeaves(rm);
     });
-    // furnish the rooms near you; clear the ones you've left behind
-    acc += dt; if (acc < 0.5 || !MP.ready) return; acc = 0;
-    MP.Player.head(head);
+    // detail follows you (every frame while there's building to do, else twice a second)
+    acc += dt; if ((!busy && acc < 0.5) || !MP.ready) return; acc = 0;
+    busy = !lod(false); MP.Player.head(head);
+    // furnish the room you're at as you approach it (and any open door you're near); clear the ones you've left behind
     Rm.list.forEach(function (rm) {
-      var dist = Math.hypot(head.x - rm.door.x, head.z - rm.door.z);
-      if (dist < NEAR && (rm.open || inside(rm, head))) ensureInterior(rm);
-      else if (dist > FAR) dropInterior(rm);
+      var dist = Math.hypot(head.x - rm.door.x, head.z - rm.door.z), shown = rm.full && rm.full.shown;
+      if (shown && dist < NEAR && (rm === focus || rm.open || inside(rm, head))) ensureInterior(rm);
+      else if (!shown || dist > FAR) dropInterior(rm);
     });
   });
   function inside(rm, p) { var I = rm.inner; return p.x > I[0] && p.x < I[2] && p.z > I[1] && p.z < I[3]; }
@@ -201,8 +285,9 @@
     MP.Plan.save(); Rm.build(); return true;
   };
   Rm.label = function (rm) { return rm ? (rm.name || rm.address) : ''; };
+  Rm.focus = function () { return focus; };
   Rm.load = function () { return MP.store.get('doors').then(function (d) { doorState = d || {}; }); };
   Rm.report = function () {
-    return Rm.list.map(function (rm) { return { address: rm.address, name: rm.name, band: rm.L.band, open: rm.open, angle: Math.round(rm.angle * 100) / 100, tier: rm.active ? 'active' : rm.wasActive ? 'shuttered' : 'none', furnished: !!rm.interior, door: [rm.door.x, rm.door.z], out: rm.door.out, inner: rm.inner }; });
+    return Rm.list.map(function (rm) { return { address: rm.address, name: rm.name, band: rm.L.band, wall: '#' + rm.wall.color.getHexString(), windows: rm.shape, open: rm.open, angle: Math.round(rm.angle * 100) / 100, tier: rm.active ? 'active' : rm.wasActive ? 'shuttered' : 'none', furnished: !!rm.interior, detail: rm.full ? (rm.full.shown ? 'full' : 'staged') : 'lite', door: [rm.door.x, rm.door.z], out: rm.door.out, inner: rm.inner }; });
   };
 })();

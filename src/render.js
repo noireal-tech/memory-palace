@@ -77,13 +77,14 @@
     }
     g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
   }
-  function Batch(group) { this.group = group; this.lists = new Map(); this.meshes = []; }
+  function Batch(group) { this.group = group; this.lists = new Map(); this.meshes = []; this.notes = []; }
+  // keep = true: flush leaves the pieces intact, so they can be merged again (rooms.js caches far rooms this way)
   // add(material, geometry, keepUV): world-space geometry; its UVs are worked out from position unless kept.
   Batch.prototype.add = function (mat, g, keepUV) {
     if (g.index) g = g.toNonIndexed();
     if (!g.attributes.normal) g.computeVertexNormals();
     if (!keepUV && mat.userData.tile) worldUV(g, mat.userData.tile);
-    if (mat.userData.set && MP.Detail) MP.Detail.note(mat, g); // where this material is, for the detail bubble
+    if (mat.userData.set && MP.Detail) { var n = MP.Detail.note(mat, g); if (n) this.notes.push(n); } // where this material is, for the detail bubble
     if (!this.lists.has(mat)) this.lists.set(mat, []);
     this.lists.get(mat).push(g);
   };
@@ -97,7 +98,7 @@
         pos.set(g.attributes.position.array, o * 3); nrm.set(g.attributes.normal.array, o * 3);
         if (g.attributes.uv) uv.set(g.attributes.uv.array, o * 2);
         if (col && g.attributes.color) col.set(g.attributes.color.array, o * 3);
-        o += g.attributes.position.count; g.dispose();
+        o += g.attributes.position.count; if (!self.keep) g.dispose();
       });
       var m = new THREE.BufferGeometry();
       m.setAttribute('position', new THREE.BufferAttribute(pos, 3)); m.setAttribute('normal', new THREE.BufferAttribute(nrm, 3)); m.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
@@ -110,7 +111,8 @@
   };
   Batch.prototype.clear = function () {
     this.meshes.forEach(function (m) { m.parent && m.parent.remove(m); m.geometry.dispose(); });
-    this.meshes = [];
+    this.meshes = []; this.lists.clear();
+    if (MP.Detail && MP.Detail.forget) MP.Detail.forget(this.notes); this.notes = [];
   };
 
   // ---------- Status label in the headset (the page's card can't be seen there) ----------
