@@ -256,7 +256,7 @@
     G.box(b, M.timber, -PX, 0, gz - 0.19, PX, K.GATE.sill, gz + 0.4);                 // the sill
     G.box(b, M.paving, -PX, 0, gz + 0.4, PX, K.FLOOR, IN[1] + 0.03);                     // the passage floor
     W.surface(-PX, gz - 0.19, PX, gz + 0.4, K.GATE.sill, 'keep', true); W.surface(-PX, gz + 0.4, PX, IN[1] + 0.03, K.FLOOR, 'keep', true);
-    karahafu(b, 0, gz, 6.6, 3.55, 1.25, 0.95, -1, 3.45); // its back ends at the wall, not in the hall
+    // (the cusped gable that stood over the gate now crowns the foyer's porch: SK.foyer)
     // first tier: hollow walls over the hall, with paper windows glowing on the inside too
     walls(b, t1, FOOT, 6.4, { bay: 2.5, hollow: 0.4, solid: false, gap: { x0: -PX, x1: PX, y1: K.GATE.h + 0.45 }, inside: { mat: M.shoji, y: 4.85 } });
     hallInside(b);
@@ -281,6 +281,83 @@
     for (var k = 0; k <= 8; k++) { var px = MP.lerp(t4[0] - 0.8, t4[2] + 0.8, k / 8); G.box(b, M.timber, px - 0.06, 15.35, t4[1] - 0.86, px + 0.06, 16.15, t4[1] - 0.74); G.box(b, M.timber, px - 0.06, 15.35, t4[3] + 0.74, px + 0.06, 16.15, t4[3] + 0.86); }
     skirt(b, [-6.0, -6.8, 6.0, 6.8], [-3.6, -4.2, 3.6, 4.2], 17.8, 18.6, 0.55);
     gableRoof(b, [-3.6, -4.2, 3.6, 4.2], 18.6, 21.4, 'z', 0.7, { fishSize: 1.1 });
+    b.flush();
+    return b;
+  };
+
+  // ---------- The foyer ----------
+  // A genkan built onto the front of the keep: you come in from the forecourt under a carriage porch with the cusped
+  // gable, through sliding lattice doors (foyer.js), onto a sunken stone floor (the doma); one step up is the timber
+  // floor, and at the back, set in the keep's stone, the ring gate through to the Central Hall. Training is run from
+  // here (foyer.js puts up its boards). Its floor sits at the hall's level so the gate's leaves swing clear.
+  var F = MP.FOYER = {
+    R: [-5.0, -19.0, 5.0, -11.95],     // outside of its walls (the back is the keep's stone)
+    IN: [-4.75, -18.75, 4.75, -11.95], // inside
+    STEP: -17.0, DOMA: -0.1, FLOOR: 0.04, CEIL: 3.6, TOP: 3.9, RIDGE: 5.45,
+    DOOR: { x: 1.2, h: 2.6, z: -18.6 }, // the entrance: an opening x ±1.2, the sliding doors just inside the south wall
+    PORCH: { z: -20.5, post: 1.85 }
+  };
+  SK.foyer = function (group) {
+    var M = MP.M, b = new MP.R.Batch(group), W = MP.World, R0 = F.R, I = F.IN, D = F.DOOR, T = F.TOP, C = F.CEIL, P = F.PORCH, t = 0.25;
+    // a low stone plinth under the walls
+    G.box(b, M.stone, R0[0] - 0.1, -0.3, R0[1] - 0.1, -D.x, 0.3, R0[1] + t); G.box(b, M.stone, D.x, -0.3, R0[1] - 0.1, R0[2] + 0.1, 0.3, R0[1] + t);
+    G.box(b, M.stone, R0[0] - 0.1, -0.3, R0[1] + t, R0[0] + t + 0.02, 0.3, R0[3]); G.box(b, M.stone, R0[2] - t - 0.02, -0.3, R0[1] + t, R0[2] + 0.1, 0.3, R0[3]);
+    // walls: white plaster over dark boarding outside, lamp-lit plaster over a wainscot inside; the entrance in the south wall
+    function wall(x0, z0, x1, z1, y0, y1, solid) { G.box(b, M.plaster, x0, y0, z0, x1, y1, z1, solid, 'foyer'); }
+    wall(R0[0], R0[1], R0[0] + t, R0[3], 0.3, T, true); wall(R0[2] - t, R0[1], R0[2], R0[3], 0.3, T, true);
+    wall(R0[0] + t, R0[1], -D.x, R0[1] + t, 0.3, T, true); wall(D.x, R0[1], R0[2] - t, R0[1] + t, 0.3, T, true);
+    wall(-D.x, R0[1], D.x, R0[1] + t, D.h, T, false); W.solid(-D.x, R0[1], D.x, R0[1] + t, T, 'foyer', D.h);
+    var e = 0.04, bt = 1.25;
+    G.box(b, M.timber, R0[0] - e, 0.3, R0[1] - e, -D.x, bt, R0[1]); G.box(b, M.timber, D.x, 0.3, R0[1] - e, R0[2] + e, bt, R0[1]);
+    G.box(b, M.timber, R0[0] - e, 0.3, R0[1], R0[0], bt, R0[3]); G.box(b, M.timber, R0[2], 0.3, R0[1], R0[2] + e, bt, R0[3]);
+    G.box(b, M.timber, R0[0] - 0.07, T - 0.3, R0[1] - 0.07, R0[2] + 0.07, T, R0[1]); // the beam round the top
+    G.box(b, M.timber, R0[0] - 0.07, T - 0.3, R0[1], R0[0], T, R0[3]); G.box(b, M.timber, R0[2], T - 0.3, R0[1], R0[2] + 0.07, T, R0[3]);
+    // the entrance's frame: posts and a lintel, outside and in
+    G.box(b, M.timber, -D.x - 0.16, 0, R0[1] - 0.06, -D.x, D.h + 0.18, R0[1] + t + 0.06); G.box(b, M.timber, D.x, 0, R0[1] - 0.06, D.x + 0.16, D.h + 0.18, R0[1] + t + 0.06);
+    G.box(b, M.timber, -D.x - 0.16, D.h, R0[1] - 0.08, D.x + 0.16, D.h + 0.22, R0[1] + t + 0.06);
+    // windows high in the side walls: lattice outside, paper lit by day inside
+    [-15.6, -13.4].forEach(function (z) {
+      G.panel(b, M.window, R0[0] - 0.035, 2.75, z, 1.0, 0.62, 'x-'); G.panel(b, M.window, R0[2] + 0.035, 2.75, z, 1.0, 0.62, 'x+');
+      G.panel(b, M.shoji, I[0] + 0.035, 2.75, z, 1.0, 0.62, 'x+'); G.panel(b, M.shoji, I[2] - 0.035, 2.75, z, 1.0, 0.62, 'x-');
+    });
+    // inside: plaster and wainscot; the floors; the step up; the ceiling with its coffers
+    var sk = 0.03, wy = 0.95;
+    [[M.inWall, 0, C], [M.inTimber, sk, wy]].forEach(function (L) {
+      var m = L[0], i = L[1], y1 = L[2];
+      G.box(b, m, I[0] + i, F.DOMA, I[1], I[0] + i + sk, y1, I[3]); G.box(b, m, I[2] - i - sk, F.DOMA, I[1], I[2] - i, y1, I[3]);
+      G.box(b, m, I[0], F.DOMA, I[1] + i, -D.x, y1, I[1] + i + sk); G.box(b, m, D.x, F.DOMA, I[1] + i, I[2], y1, I[1] + i + sk);
+      if (y1 > D.h + 0.22) G.box(b, m, -D.x, D.h + 0.22, I[1] + i, D.x, y1, I[1] + i + sk);
+    });
+    G.box(b, M.stone, I[0], F.DOMA - 0.3, I[1], I[2], F.DOMA, F.STEP);                       // the doma: stone, a step down
+    G.box(b, M.stone, -D.x, -0.3, R0[1] - 0.02, D.x, 0.03, I[1]);                              // the threshold
+    G.box(b, M.inTimber, I[0], F.DOMA, F.STEP, I[2], F.FLOOR, I[3]);                          // the timber floor
+    G.box(b, M.inTimber, I[0], F.DOMA, F.STEP - 0.12, I[2], F.FLOOR + 0.02, F.STEP + 0.06);     // the step's edge beam
+    G.box(b, M.inCeil, I[0], C, I[1], I[2], C + 0.1, -11.0);
+    for (var cz = -17.6; cz < -12.4; cz += 1.6) G.box(b, M.inTimber, I[0], C - 0.18, cz - 0.07, I[2], C, cz + 0.07);
+    for (var cx = -3.2; cx <= 3.3; cx += 1.6) G.box(b, M.inTimber, cx - 0.07, C - 0.18, I[1], cx + 0.07, C, -12.0);
+    G.box(b, M.inTimber, I[0], C - 0.3, I[1], I[2], C, I[1] + 0.12); // the beam round the top, inside
+    G.box(b, M.inTimber, I[0], C - 0.3, I[1], I[0] + 0.12, C, I[3]); G.box(b, M.inTimber, I[2] - 0.12, C - 0.3, I[1], I[2], C, I[3]);
+    // a shoe cupboard on the doma, as every genkan has
+    G.box(b, M.inTimber, I[0] + 0.05, F.DOMA, -18.5, I[0] + 0.5, 0.95, -17.25, true, 'foyer');
+    G.box(b, M.inCeil, I[0] + 0.5, F.DOMA + 0.12, -18.42, I[0] + 0.52, 0.85, -17.33);
+    // where you can stand: the porch, the threshold, the doma, the timber floor (up to the gate's sill); the ceiling stops arcs
+    W.surface(-D.x, R0[1] - 0.02, D.x, I[1], 0.03, 'foyer', true);
+    W.surface(I[0], I[1], I[2], F.STEP, F.DOMA, 'foyer', true);
+    W.surface(I[0], F.STEP, I[2], -12.16, F.FLOOR, 'foyer', true);
+    W.solid(I[0], I[1], I[2], -11.0, 30, 'foyer', C);
+    // the carriage porch: a stone apron, two posts, and the cusped gable that used to stand over the gate
+    G.box(b, M.stone, -2.4, -0.3, P.z - 0.35, 2.4, 0.06, R0[1]);
+    W.surface(-2.4, P.z - 0.35, 2.4, R0[1] - 0.02, 0.06, 'foyer', true);
+    [-1, 1].forEach(function (s) {
+      G.box(b, M.timber, s * P.post - 0.12, 0.06, P.z - 0.12, s * P.post + 0.12, 3.05, P.z + 0.12, true, 'foyer');
+      G.box(b, M.stone, s * P.post - 0.2, 0, P.z - 0.2, s * P.post + 0.2, 0.12, P.z + 0.2);
+    });
+    G.box(b, M.timber, -P.post - 0.2, 2.86, P.z - 0.16, P.post + 0.2, 3.1, P.z + 0.16);           // the beam across the posts
+    G.box(b, M.timber, -P.post - 0.08, 2.9, P.z, -P.post + 0.08, 3.06, R0[1]); G.box(b, M.timber, P.post - 0.08, 2.9, P.z, P.post + 0.08, 3.06, R0[1]);
+    karahafu(b, 0, P.z + 0.55, 4.6, 3.06, 1.05, 1.5, -1, 2.95);
+    // the main roof: a gable along the foyer's length, its front gable over the porch, its back tucked under the keep's eaves
+    gableRoof(b, [R0[0], R0[1], R0[2], R0[3] - 0.3], T, F.RIDGE, 'z', 0.55, { fish: false });
+    W.solid(R0[0] - 0.6, R0[1] - 0.6, R0[2] + 0.6, R0[3], 30, 'foyer', T); // nothing lands on the roof
     b.flush();
     return b;
   };
@@ -362,5 +439,5 @@
   };
 
   MP.Skins = MP.Skins || {};
-  MP.Skins.pagoda = { name: 'Japanese pagoda', keep: SK.keep, module: SK.module, parts: { skirt: skirt, gableRoof: gableRoof, dormer: dormer, karahafu: karahafu, walls: walls, stoneFoot: stoneFoot } };
+  MP.Skins.pagoda = { name: 'Japanese pagoda', keep: SK.keep, foyer: SK.foyer, module: SK.module, parts: { skirt: skirt, gableRoof: gableRoof, dormer: dormer, karahafu: karahafu, walls: walls, stoneFoot: stoneFoot } };
 })();

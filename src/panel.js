@@ -26,17 +26,25 @@
   // ---------- Faces ----------
   function bt(label, sub, run, x, y, w, h) { return { label: label, sub: sub, run: run, x: x, y: y, w: w, h: h }; }
   function roomNow() { return MP.Rooms ? MP.Rooms.current() : null; }
+  // the Train face is there in Training mode (the foyer's mode board), first, so a session is one look away
+  function faces() { var f = ['Go', 'Make', 'Settings']; if (MP.Train && MP.Train.training()) f.unshift('Train'); return f; }
+  function setFaces() { var name = FACES[face], f = faces(); if (f.join() !== FACES.join()) { FACES = f; face = Math.max(0, FACES.indexOf(name)); } }
   function layout() {
-    buttons = [];
+    buttons = []; setFaces();
     if (keyboard) return layoutKeyboard();
     if (catalog) return layoutCatalog();
-    FACES.forEach(function (f, i) { buttons.push(bt(f, '', function () { flip(i - face); }, 40 + i * 232, 34, 220, 78)); buttons[i].tab = true; });
+    var tw = (W - 80 - (FACES.length - 1) * 12) / FACES.length;
+    FACES.forEach(function (f, i) { buttons.push(bt(f, '', function () { flip(i - face); }, 40 + i * (tw + 12), 34, tw, 78)); buttons[i].tab = true; });
+    if (FACES[face] === 'Train') return layoutTrain();
     var y0 = 196, bw = W - 80, bh = 118, gap = 18;
-    if (face === 0) {
-      buttons.push(bt('Endless Clay', 'Through the portal', function () { MP.Portal.travel(); }, 40, y0, bw, bh));
-      buttons.push(bt('The forecourt', 'Back in front of the keep', function () { MP.arrive(); }, 40, y0 + bh + gap, bw, bh));
-      buttons.push(bt('The Central Hall', 'Inside the gate, by the garden', function () { P.stand(); P.place(0, -7.4, Math.PI); if (MP.Portal) MP.Portal.reset(); }, 40, y0 + 2 * (bh + gap), bw, bh));
-    } else if (face === 1) {
+    if (FACES[face] === 'Go') {
+      var gh = 92, gg = 10, half4 = (bw - gap) / 2;
+      buttons.push(bt('The forecourt', 'In front of the keep', function () { MP.arrive(); }, 40, y0, half4, gh));
+      buttons.push(bt('The foyer', 'Training, by the entrance', function () { P.stand(); P.place(0, -16.2, Math.PI); if (MP.Portal) MP.Portal.reset(); }, 40 + half4 + gap, y0, half4, gh));
+      buttons.push(bt('The Central Hall', 'Inside the gate, by the garden', function () { P.stand(); P.place(0, -7.4, Math.PI); if (MP.Portal) MP.Portal.reset(); }, 40, y0 + gh + gg, bw, gh));
+      buttons.push(bt('Endless Clay', 'Through the portal', function () { MP.Portal.travel(); }, 40, y0 + 2 * (gh + gg), bw, gh));
+      buttons.forEach(function (b) { if (!b.tab) b.small = true; });
+    } else if (FACES[face] === 'Make') {
       var rm = roomNow();
       var held = MP.Things && MP.Things.held(), half3 = (bw - gap) / 2, tool = MP.Closets && MP.Closets.tool;
       var doorTool = function (x, y, w) { buttons.push(bt('Door tool', 'A closet door, in a wall', function () { tool.start(); }, x, y, w, bh)); };
@@ -73,19 +81,47 @@
       buttons.push(bt('Hall sound', wn ? 'White noise: nothing else, inside the hall' : 'Natural: water, wind, the hall’s things', function () { MP.Sound.setHallSound(wn ? 'natural' : 'white'); }, 40, y0 + 2 * (bh + gap), bw, bh));
     }
   }
+  // The Train face: the session's view (session.js), or how to start one
+  var trainView = null;
+  function layoutTrain() {
+    var S = MP.Session, v = S && S.view(); trainView = v;
+    var y0 = 250, bw = W - 80, bh = 110, gap = 14, half = (bw - gap) / 2;
+    if (!v) {
+      if (MP.Routes && MP.Routes.tool.active) return;
+      var can = S && S.canStart();
+      buttons.push(bt('Go to the foyer', 'Sessions start at its training board', function () { P.stand(); P.place(0, -16.2, Math.PI); if (MP.Portal) MP.Portal.reset(); }, 40, y0, bw, bh));
+      buttons.push(bt(can ? 'Start here' : 'Done for today', can ? 'Today’s session, from where you stand' : 'Come back tomorrow', function () { if (S.canStart()) S.start(false); }, 40, y0 + bh + gap, bw, bh)); if (!can) buttons[buttons.length - 1].dim = true;
+      return;
+    }
+    var bs = v.buttons || [];
+    bs.slice(0, 6).forEach(function (b, i) {
+      var one = bs.length === 1 || (bs.length % 2 === 1 && i === bs.length - 1);
+      var x = one ? 40 : 40 + (i % 2) * (half + gap), y = y0 + Math.floor(i / 2) * (bh + gap);
+      buttons.push(bt(b.label, b.sub, b.run, x, y, one ? bw : half, bh)); var nb = buttons[buttons.length - 1]; nb.dim = b.dim; nb.primary = b.primary; nb.small = true;
+    });
+  }
   // The catalog: what you can add to the hall, three by three, and a way back
   function layoutCatalog() {
     var cw = 216, ch = 98, gx = 14, top = 176, x0 = (W - (3 * cw + 2 * gx)) / 2;
     MP.Things.CATALOG.forEach(function (c, i) {
-      buttons.push(bt(c.label, '', function () { MP.Things.spawn(c.kind); catalog = false; face = 1; }, x0 + (i % 3) * (cw + gx), top + Math.floor(i / 3) * (ch + gx), cw, ch));
+      buttons.push(bt(c.label, '', function () { MP.Things.spawn(c.kind); catalog = false; face = Math.max(0, FACES.indexOf('Make')); }, x0 + (i % 3) * (cw + gx), top + Math.floor(i / 3) * (ch + gx), cw, ch));
       buttons[buttons.length - 1].small = true;
     });
-    buttons.push(bt('Back', '', function () { catalog = false; face = 1; }, 40, top + 3 * (ch + gx) + 4, W - 80, 76));
+    buttons.push(bt('Back', '', function () { catalog = false; face = Math.max(0, FACES.indexOf('Make')); }, 40, top + 3 * (ch + gx) + 4, W - 80, 76));
   }
   // Keyboard: big keys, the name so far across the top
   var ROWS = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'];
   function layoutKeyboard() {
     var kw = 66, kh = 74, gx = 6, top = 150;
+    if (keyboard.room.digits) { // a number pad: big keys, three by three and a zero
+      var dw = 150, dh = 74, dx0 = (W - 3 * dw - 2 * 12) / 2;
+      '1234567890'.split('').forEach(function (ch, i) { var r = Math.floor(i / 3), c = i % 3; if (ch === '0') { r = 3; c = 1; } buttons.push(bt(ch, '', function () { if (keyboard.text.length < 100) keyboard.text += ch; }, dx0 + c * (dw + 12), top + r * (dh + 8), dw, dh)); });
+      buttons.push(bt('Delete', '', function () { keyboard.text = keyboard.text.slice(0, -1); }, dx0 + 2 * (dw + 12), top + 3 * (dh + 8), dw, dh));
+      var yd = top + 4 * (dh + 8) + 6;
+      buttons.push(bt('Cancel', '', function () { closeKeyboard(false); }, 40, yd, 330, kh));
+      buttons.push(bt('Done', '', function () { closeKeyboard(true); }, 398, yd, 330, kh)); buttons[buttons.length - 1].primary = true;
+      return;
+    }
     ROWS.forEach(function (row, ri) {
       var x0 = (W - (row.length * (kw + gx) - gx)) / 2;
       row.split('').forEach(function (ch, ci) { buttons.push(bt(ch, '', function () { type(ch); }, x0 + ci * (kw + gx), top + ri * (kh + gx), kw, kh)); });
@@ -108,7 +144,7 @@
   function closeKeyboard(save) {
     var k = keyboard; keyboard = null;
     if (save && k) { if (k.room.setName) k.room.setName(k.text); else MP.Rooms.setName(k.room.address, k.text); }
-    face = 1; layout(); draw();
+    if (!(k && k.room.digits !== undefined)) face = Math.max(0, FACES.indexOf('Make')); layout(); draw(); // an answer goes back to the Train face
   }
 
   // ---------- Drawing: washi paper, a bamboo frame, brush lettering ----------
@@ -146,13 +182,20 @@
     g.clearRect(0, 0, W, H); g.drawImage(paper, 0, 0);
     g.textBaseline = 'middle'; g.fillStyle = INK;
     if (keyboard) {
-      g.font = '40px ' + BRUSH; g.textAlign = 'left'; g.fillText('Name: ' + (keyboard.room.label ? keyboard.room.label() : MP.Rooms.label(keyboard.room)), 40, 58, W - 80);
+      g.font = '40px ' + BRUSH; g.textAlign = 'left'; g.fillText((keyboard.room.digits !== undefined ? '' : 'Name: ') + (keyboard.room.label ? keyboard.room.label() : MP.Rooms.label(keyboard.room)), 40, 58, W - 80);
       g.font = '50px ' + BRUSH; var shown = keyboard.text + (Math.floor(performance.now() / 500) % 2 ? '|' : ' ');
       g.fillText(shown, 40, 112, W - 80);
       g.strokeStyle = 'rgba(31, 26, 20, 0.4)'; g.beginPath(); g.moveTo(40, 138); g.lineTo(W - 40, 138); g.stroke();
-    } else if (MP.Closets && MP.Closets.tool.active && face === 1) {
+    } else if (MP.Closets && MP.Closets.tool.active && FACES[face] === 'Make') {
       g.font = '50px ' + BRUSH; g.textAlign = 'left'; g.fillText('A closet door', 44, 230, W - 88);
       g.font = '32px ' + BRUSH; g.globalAlpha = 0.8; ['Point at a wall: a ghost door shows where it goes', 'and what lies behind the wall. Pull the trigger', 'to make it. A closet is bigger inside than out.'].forEach(function (l, i) { g.fillText(l, 44, 290 + i * 42, W - 88); }); g.globalAlpha = 1;
+    } else if (FACES[face] === 'Train' && !catalog) {
+      var v = trainView;
+      if (!v && MP.Routes && MP.Routes.tool.active) v = { title: 'Placing stations', lines: ['Point at the floor and pull the trigger.'] };
+      if (!v) { var d = MP.Train.day(); v = { title: d === 0 ? 'Day 0: your baseline' : 'Day ' + d + (d <= 40 ? ' of 40' : ''), lines: [MP.Session && MP.Session.msg || 'Sessions start at the training board in the foyer.'] }; }
+      g.font = '42px ' + BRUSH; g.textAlign = 'left'; g.fillText(v.title, 44, 146, W - 88);
+      g.font = '28px ' + BRUSH; g.globalAlpha = 0.75; (v.lines || []).slice(0, 2).forEach(function (l, i) { g.fillText(l, 44, 190 + i * 32, W - 88); }); g.globalAlpha = 1;
+      if (v.big && (v.buttons || []).length <= 2) { g.font = (v.big.length <= 2 ? 200 : 96) + 'px ' + BRUSH; g.textAlign = 'center'; g.fillText(v.big, W / 2, v.buttons && v.buttons.length ? 470 : 420, W - 100); }
     } else if (catalog) {
       g.font = '44px ' + BRUSH; g.textAlign = 'left'; g.fillText(MP.Things && MP.Things.inCloset() ? 'Add to this closet' : 'Add to the hall', 40, 70, W - 80);
       g.font = '26px ' + BRUSH; g.globalAlpha = 0.7; g.fillText('It appears in front of you. Grip it to move it; point and pull the trigger to use it.', 40, 128, W - 80); g.globalAlpha = 1;
@@ -165,7 +208,7 @@
       g.textAlign = b.sub ? 'left' : 'center'; g.fillStyle = b.dim ? 'rgba(31, 26, 20, 0.5)' : INK;
       var tx = b.sub ? b.x + 28 : b.x + b.w / 2;
       g.font = (b.tab ? 40 : keyboard ? 40 : b.small ? 34 : 52) + 'px ' + BRUSH;
-      var label = keyboard && b.label.length === 1 && keyboard.lower ? b.label.toLowerCase() : b.label;
+      var label = keyboard && b.label.length === 1 && keyboard.lower && !keyboard.room.digits ? b.label.toLowerCase() : b.label;
       g.fillText(label, tx, b.sub ? b.y + b.h * 0.38 : b.y + b.h / 2 + 2, b.w - 40);
       if (b.sub) { g.font = '30px ' + BRUSH; g.globalAlpha = 0.68; g.fillText(b.sub, tx, b.y + b.h * 0.75, b.w - 56); g.globalAlpha = 1; }
       if (cur) { g.fillStyle = SEAL; g.beginPath(); g.arc(b.x + b.w - 22, b.y + 20, 7, 0, Math.PI * 2); g.fill(); } // a red seal marks the face you're on
@@ -216,12 +259,14 @@
       }
     }
     redrawAcc += dt;
-    if (hover !== prev || (keyboard && redrawAcc > 0.5) || (face === 1 && redrawAcc > 0.5)) { redrawAcc = 0; if (!keyboard) layout(); draw(); } // the Make face follows the room you're near and what you hold
+    if (hover !== prev || (keyboard && redrawAcc > 0.5) || ((FACES[face] === 'Make' || FACES[face] === 'Train') && redrawAcc > 0.5)) { redrawAcc = 0; if (!keyboard) layout(); draw(); } // the Make face follows the room you're near and what you hold
   });
   P.onSelect = function (rec) {
     if (MP.awaitTrigger) { MP.awaitTrigger = false; MP.Links.go('clay', 'via=palace'); return; }
     if (MP.Sound) MP.Sound.wake(); // a trigger pull lets sound start
     if (rec.hand === 'right' && pointing) { if (hover >= 0) { buttons[hover].run(); if (!keyboard) layout(); draw(); } return; }
+    if (rec.hand === 'right' && MP.Routes && MP.Routes.tool.active) { MP.Routes.tool.place(); layout(); draw(); return; } // placing a route's stations
+    if (rec.hand === 'right' && MP.Session && MP.Session.trigger()) { layout(); draw(); return; } // a session step that wants the trigger
     if (rec.hand === 'right' && MP.Closets && MP.Closets.tool.active) { MP.Closets.tool.place(); layout(); draw(); return; } // the Door tool
     if (MP.Grab && MP.Grab.press(rec, 'trigger')) return; // your hand is on something you can hold
     if (rec.hand !== 'right') return;
@@ -235,6 +280,11 @@
     say: function (t) { note = t; draw(); },
     pointing: function () { return pointing; },
     face: function () { return keyboard ? 'Keyboard' : catalog ? 'Catalog' : FACES[face]; },
+    faces: function () { setFaces(); return FACES.slice(); },
+    show: function (name) { setFaces(); var i = FACES.indexOf(name); if (i >= 0 && !keyboard) { face = i; layout(); draw(); } },
+    typing: function () { return keyboard ? keyboard.text : null; },
+    type: function (t) { if (keyboard) keyboard.text = t; },
+    done: function () { if (keyboard) closeKeyboard(true); },
     flip: function (by) { flip(by); },
     buttons: function () { return buttons.map(function (b) { return b.label; }); },
     press: function (label) { for (var i = 0; i < buttons.length; i++) if (buttons[i].label === label) { buttons[i].run(); if (!keyboard) layout(); draw(); return true; } return false; },

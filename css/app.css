@@ -33,3 +33,20 @@ button:disabled { opacity: 0.45; cursor: default; }
 #nameBox .addr { margin: 8px 0 14px; font: 14px 'Bricolage Grotesque', system-ui, sans-serif; color: #5a4a38; }
 #nameBox button { font-family: 'Kaushan Script', cursive; font-size: 22px; color: #1f1a14; background: transparent; border: 2px solid rgba(31, 26, 20, 0.5); }
 #nameBox #nameSave { background: #1f1a14; color: #f2e8d2; }
+/* the training session on a flat screen (trainui.js) */
+#train { position: fixed; right: 16px; bottom: 16px; width: min(380px, calc(100% - 32px)); padding: 16px 18px 12px; border-radius: 14px;
+  background: #f2e8d2; color: #1f1a14; border: 8px solid #c2a95c; box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4); font-family: 'Kaushan Script', cursive; z-index: 5; }
+#train[hidden] { display: none; }
+#train h2 { margin: 0 0 6px; font-size: 24px; font-weight: 400; }
+#train .lines { margin: 0 0 8px; font: 15px/1.35 'Bricolage Grotesque', system-ui, sans-serif; color: #3a2e22; }
+#train .big { margin: 4px 0 10px; font-size: 40px; text-align: center; }
+#train .big[hidden], #train form[hidden] { display: none; }
+#train form { display: flex; gap: 8px; margin-bottom: 8px; }
+#train input { flex: 1; min-width: 0; font: 20px 'Kaushan Script', cursive; padding: 6px 10px; border: 2px solid rgba(31, 26, 20, 0.4); border-radius: 8px; background: #fbf5e6; color: #1f1a14; }
+#train input:focus-visible, #train button:focus-visible { outline: 3px solid #a8342a; outline-offset: 2px; }
+#train .buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+#train button { font: 18px 'Kaushan Script', cursive; color: #1f1a14; background: transparent; border: 2px solid rgba(31, 26, 20, 0.5); border-radius: 8px; padding: 6px 12px; min-height: 40px; cursor: pointer; }
+#train button.primary, #train form button { background: #1f1a14; color: #f2e8d2; }
+#train button.dim { opacity: 0.55; }
+#train .progress { margin: 8px 0 0; font: 12px 'Bricolage Grotesque', system-ui, sans-serif; color: #6b5a46; }
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

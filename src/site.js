@@ -61,7 +61,7 @@
     G.box(b, M.stone, -4.4, y, MO[1] - 0.8, -3.9, y + 0.8, S.STAIR0, true); G.box(b, M.stone, 3.9, y, MO[1] - 0.8, 4.4, y + 0.8, S.STAIR0, true);
     // lanterns and trees
     MP.Nature.lantern(b, -5.6, MO[1] - 2.4, y); MP.Nature.lantern(b, 5.6, MO[1] - 2.4, y);
-    MP.Nature.lantern(b, -5.2, -15.5, 0); MP.Nature.lantern(b, 5.2, -15.5, 0);
+    MP.Nature.lantern(b, -3.6, -22.4, 0); MP.Nature.lantern(b, 3.6, -22.4, 0); // either side of the walk up to the foyer's porch
     [[-10, -50], [10, -51.5], [-18, -48], [18, -49], [-27, -50.5], [28, -50]].forEach(function (t) { MP.Nature.cherry(b, t[0], y, t[1], 1 + rnd() * 0.25, rnd); });
     [[-12, -27], [12, -27], [-12, -17], [12, -17]].forEach(function (t) { MP.Nature.cherry(b, t[0], 0, t[1], 0.7 + rnd() * 0.15, rnd); });
     [[-12, -31], [12, -31], [-12, -22], [12, -22], [-12, -12.5], [12, -12.5]].forEach(function (t, i) { MP.Nature.shrub(b, t[0], 0, t[1], 0.9, i % 2 === 0, rnd); });

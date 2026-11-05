@@ -84,7 +84,7 @@
 
   // the right stick, from the player's controller loop: true while teleport has the stick
   function stick(p, sx, sy) {
-    if (!P.settings.teleport) return false;
+    if (!P.settings.teleport || (MP.Session && MP.Session.walkOnly())) return false; // walk-only while a session runs
     if (blink) return true;
     if (!aim) { if (sy < -0.65 && Math.abs(sx) < 0.7) aim = { pad: p, seen: performance.now() }; else return false; }
     if (sy > 0.5) { cancel(); aim = { pad: null, done: true }; return true; } // pulled back: called off
@@ -99,7 +99,7 @@
   var flatAim = false;
   addEventListener('keydown', function (e) {
     if (e.code !== 'Space' || e.repeat || (e.target && /input|textarea|button/i.test(e.target.tagName))) return;
-    if (!P.enabled || !P.settings.teleport || R.presenting()) return; e.preventDefault(); flatAim = true;
+    if (!P.enabled || !P.settings.teleport || R.presenting() || (MP.Session && MP.Session.walkOnly())) return; e.preventDefault(); flatAim = true;
   });
   addEventListener('keyup', function (e) { if (e.code !== 'Space' || !flatAim) return; flatAim = false; release(); });
   addEventListener('blur', function () { if (flatAim) { flatAim = false; cancel(); } });

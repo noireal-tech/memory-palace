@@ -57,7 +57,7 @@
 
   // ---------- Wind chimes at the front door ----------
   // Five tubes tuned to a pentatonic chord; a tube rings with the partials of a free metal bar (1, 2.756, 5.404, 8.933).
-  var CHIME = { at: [2.95, 3.45, -12.4],  // under the corner of the gate's roof, clear of the leaves' swing
+  var CHIME = { at: [1.3, 2.84, -20.5],    // under the foyer porch's beam, by the way in
                 notes: [880, 987.8, 1108.7, 1318.5, 1480] }; // A5 B5 C#6 E6 F#6
   var chime = null, chimeBus = null;
   function buildChimes(group) {

@@ -43,7 +43,7 @@
     var rnd = MP.rng(7);
     MP.SITE.build(groups.site, rnd); await MP.yieldFrame();
     var skin = MP.Skins[MP.params.get('skin') || 'pagoda'] || MP.Skins.pagoda;
-    skin.keep(groups.keep); await MP.yieldFrame();
+    skin.keep(groups.keep); if (skin.foyer) skin.foyer(groups.keep); await MP.yieldFrame();
     // the Central Hall inside the keep: the gate, the cascade, the stair, the bench, the garden
     R.status('Furnishing the hall…', true);
     await MP.Gate.build(groups.keep); MP.Hall.build(groups.hall); await MP.yieldFrame(); await MP.Garden.build(groups.hall); await MP.yieldFrame();
@@ -51,6 +51,8 @@
     R.scene.add(MP.Rooms.group); await MP.Plan.load(); await MP.Rooms.load(); R.status('Raising your rooms…', true); MP.Rooms.build(); await MP.yieldFrame();
     // closets after the rooms (their doors can be in rooms' walls), and things after closets (they can stand in them)
     await MP.Closets.build(); await MP.yieldFrame(); await MP.Things.build(groups.hall); await MP.yieldFrame();
+    // training: its state, the routes' plaques (they can be in closets), and the foyer's doors and boards
+    await MP.Train.load(); MP.Routes.build(); await MP.Foyer.build(); await MP.yieldFrame();
     // prepare every material's shaders before the first full frame, in the background where the browser allows it
     R.status('Lighting the palace…', true);
     try { if (R.renderer.compileAsync) await R.renderer.compileAsync(R.scene, R.camera); else R.renderer.compile(R.scene, R.camera); } catch (e) { MP.log('compile', e); }
@@ -91,6 +93,7 @@
     place: function (x, y, z, hold) { R.rig.position.set(x, y, z); P.hold = !!hold; MP.Portal.reset(); },
     look: function (yaw, pitch) { P.flatYaw = yaw; P.flatPitch = pitch; R.rig.rotation.y = yaw; R.camera.rotation.set(pitch, 0, 0); },
     walk: function (n, f, s) { for (var i = 0; i < n; i++) { P.move(1 / 60, f, s || 0); MP.Portal.check(); if (MP.Closets) MP.Closets.check(); } return R.rig.position.toArray(); },
-    lastLink: function () { return MP.lastLink || null; }, hall: function () { return { gate: MP.Gate.angles(), garden: MP.Garden.report(), seat: MP.Player.seat, things: MP.Things.report(), closets: MP.Closets.report(), space: MP.World.space }; }, detail: function () { MP.Detail.update(true); return MP.Detail.report(); }, sound: function () { return MP.Sound.debug(); }
+    lastLink: function () { return MP.lastLink || null; }, hall: function () { return { gate: MP.Gate.angles(), garden: MP.Garden.report(), seat: MP.Player.seat, things: MP.Things.report(), closets: MP.Closets.report(), space: MP.World.space }; }, detail: function () { MP.Detail.update(true); return MP.Detail.report(); }, sound: function () { return MP.Sound.debug(); },
+    train: function () { var T = MP.Train, S = MP.Session, v = S.view(); return { mode: T.mode(), opts: T.state.opts, day: T.day(), done: T.doneToday(), session: S.active, step: S.step && S.step.name, view: v && { title: v.title, lines: v.lines, buttons: (v.buttons || []).map(function (b) { return b.label; }) }, routes: MP.Routes.report(), lists: T.state.lists.map(function (l) { return { id: l.id, kind: l.kind, n: l.items.length, date: l.date, res: Object.keys(l.res).map(function (k) { return k + ':' + l.res[k].pct; }), open: l.open, routes: l.routes }; }), load: T.state.load, battery: T.state.battery.length }; }
   };
 })();
