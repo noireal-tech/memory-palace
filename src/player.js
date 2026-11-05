@@ -1,10 +1,27 @@
-/* Memory Palace: getting around. Left stick walks where you look, right stick snap-turns; on a flat screen, drag to
-   look and use WASD or the arrow keys. Feet follow the ground; buildings, trees and water stop you. */
+/* Memory Palace: getting around. Left stick walks where you look; right stick turns (snap or smooth, your choice on
+   the panel's Settings face) and, pushed forward, aims a teleport (teleport.js). On a flat screen, drag to look, use
+   WASD or the arrow keys, and hold Space to teleport. Feet follow the ground; buildings, trees and water stop you. */
 (function () {
   'use strict';
   var MP = window.MP, R = MP.R, W = MP.World, rig = R.rig, camera = R.camera, renderer = R.renderer;
   var tmp = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
   var P = MP.Player = { speed: 2.3, hold: false, flatYaw: Math.PI, flatPitch: 0.03 };
+
+  // ---------- Movement settings, chosen on the hand panel's Settings face and kept on this headset ----------
+  P.TURNS = {
+    snap30: { label: 'Snap, 30° steps', snap: Math.PI / 6 },
+    snap45: { label: 'Snap, 45° steps', snap: Math.PI / 4 },
+    smooth: { label: 'Smooth, gentle', rate: Math.PI / 3 },        // 60° a second at full stick
+    smoothFast: { label: 'Smooth, quick', rate: Math.PI * 2 / 3 }  // 120° a second
+  };
+  var TURN_ORDER = ['snap30', 'snap45', 'smooth', 'smoothFast'];
+  P.settings = { turn: 'snap30', teleport: true };
+  try { var saved = JSON.parse(localStorage.getItem('mp.move') || 'null'); if (saved) { if (P.TURNS[saved.turn]) P.settings.turn = saved.turn; if (typeof saved.teleport === 'boolean') P.settings.teleport = saved.teleport; } } catch (e) { }
+  function keep() { try { localStorage.setItem('mp.move', JSON.stringify(P.settings)); } catch (e) { } }
+  P.setTurn = function (mode) { if (P.TURNS[mode]) { P.settings.turn = mode; keep(); } };
+  P.cycleTurn = function () { P.setTurn(TURN_ORDER[(TURN_ORDER.indexOf(P.settings.turn) + 1) % TURN_ORDER.length]); };
+  P.setTeleport = function (on) { P.settings.teleport = !!on; keep(); if (!on && MP.Teleport) MP.Teleport.cancel(); };
+  P.turnLabel = function () { return P.TURNS[P.settings.turn].label; };
 
   function head(out) { rig.updateMatrixWorld(true); return out.setFromMatrixPosition(camera.matrixWorld); }
   function headYaw() { camera.getWorldDirection(tmp); return Math.atan2(-tmp.x, -tmp.z); }
@@ -57,8 +74,15 @@
     pads.forEach(function (p) {
       var gp = p.src && p.src.gamepad; if (!gp) return; var ax = gp.axes, sx = ax[2] || 0, sy = ax[3] || 0;
       if (p.hand === 'left') { if (Math.hypot(sx, sy) > 0.15) { f = -sy; s = sx; } }
-      else if (p.hand === 'right') { if (MP.Panel && MP.Panel.pointing()) return; // pointing at the panel: the stick flips its faces
-        if (Math.abs(sx) > 0.7 && p.snapReady) { P.turn(sx > 0 ? -Math.PI / 6 : Math.PI / 6); p.snapReady = false; } if (Math.abs(sx) < 0.3) p.snapReady = true; }
+      else if (p.hand === 'right') {
+        if (MP.Panel && MP.Panel.pointing()) { if (MP.Teleport) MP.Teleport.cancel(); return; } // pointing at the panel: the stick flips its faces
+        // stick forward aims a teleport; let go to land there
+        if (MP.Teleport && MP.Teleport.stick(p, sx, sy)) return;
+        if (Math.abs(sy) > 0.6) return; // mostly forward or back: not a turn
+        var t = P.TURNS[P.settings.turn];
+        if (t.snap) { if (Math.abs(sx) > 0.7 && p.snapReady) { P.turn(sx > 0 ? -t.snap : t.snap); p.snapReady = false; } if (Math.abs(sx) < 0.3) p.snapReady = true; }
+        else if (Math.abs(sx) > 0.18) { var k = (Math.abs(sx) - 0.18) / 0.82; P.turn(-Math.sign(sx) * k * k * t.rate * dt); } // eases in from the centre
+      }
     });
     P.move(dt, f, s);
   }

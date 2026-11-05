@@ -10,7 +10,8 @@
   var W = MP.World = {
     surface: function (x0, z0, x1, z1, h, tag) { surfaces.push({ x0: Math.min(x0, x1), z0: Math.min(z0, z1), x1: Math.max(x0, x1), z1: Math.max(z0, z1), h: h, tag: tag || '' }); },
     // A solid box blocks walking for anyone whose feet are below its top (minus a step).
-    solid: function (x0, z0, x1, z1, top, tag) { solids.push({ x0: Math.min(x0, x1), z0: Math.min(z0, z1), x1: Math.max(x0, x1), z1: Math.max(z0, z1), top: top, tag: tag || '' }); },
+    // `bottom` (optional) makes it an overhead slab, such as a ceiling or a lintel: you walk under it, but a teleport arc stops on it.
+    solid: function (x0, z0, x1, z1, top, tag, bottom) { solids.push({ x0: Math.min(x0, x1), z0: Math.min(z0, z1), x1: Math.max(x0, x1), z1: Math.max(z0, z1), top: top, tag: tag || '', bottom: bottom == null ? -1e9 : bottom }); },
     drop: function (tag) { surfaces = surfaces.filter(function (s) { return s.tag !== tag; }); solids = solids.filter(function (s) { return s.tag !== tag; }); },
     fallback: 0,
     groundAt: function (x, z) {
@@ -22,7 +23,12 @@
     },
     blocked: function (x, z, feet, r) {
       r = r || 0.25;
-      for (var i = 0; i < solids.length; i++) { var s = solids[i]; if (x > s.x0 - r && x < s.x1 + r && z > s.z0 - r && z < s.z1 + r && feet < s.top - 0.45) return true; }
+      for (var i = 0; i < solids.length; i++) { var s = solids[i]; if (x > s.x0 - r && x < s.x1 + r && z > s.z0 - r && z < s.z1 + r && feet < s.top - 0.45 && feet + 1.9 > s.bottom) return true; }
+      return false;
+    },
+    // Is the point (x, y, z) inside anything solid? For the teleport arc: walls, trunks, ceilings and lintels.
+    inside: function (x, y, z) {
+      for (var i = 0; i < solids.length; i++) { var s = solids[i]; if (x > s.x0 && x < s.x1 && z > s.z0 && z < s.z1 && y < s.top && y > s.bottom) return true; }
       return false;
     },
     counts: function () { return { surfaces: surfaces.length, solids: solids.length }; }

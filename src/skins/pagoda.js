@@ -224,6 +224,9 @@
     G.box(b, M.timber, inner[0], 0.02, inner[1], inner[2], 0.07, inner[3]);   // floor
     G.box(b, M.eave, inner[0], F1_H - 0.12, inner[1], inner[2], F1_H, inner[3]); // ceiling
     MP.World.surface(inner[0], inner[1], inner[2], inner[3], 0.07, tag);
+    // the ceiling and the wall over the door stop a teleport arc (you can't land in a room through its roof)
+    MP.World.solid(inner[0], inner[1], inner[2], inner[3], 30, tag, F1_H - 0.12);
+    MP.World.solid(Math.min(sx0, sx1), zc - DOOR_W / 2, Math.max(sx0, sx1), zc + DOOR_W / 2, 30, tag, DOOR_H);
     MP.World.surface(Math.min(sx0, sx1) - 0.01, zc - DOOR_W / 2, Math.max(sx0, sx1) + 0.01, zc + DOOR_W / 2, 0.05, tag);
     // the door's timber frame, a beam over it, and the brass plaque above
     var fx0 = Math.min(xs, xs + out * 0.18), fx1 = Math.max(xs, xs + out * 0.18);

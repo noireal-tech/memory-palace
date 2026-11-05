@@ -274,6 +274,8 @@
     return { rms: Math.sqrt(rms / d.length), peakHz: Math.round(k * hz), chimeBandDb: Math.round(band(850, 1550)), cicadaBandDb: Math.round(band(3800, 5200)) };
   };
   S.cicadaNow = function () { cicadas.forEach(cicadaPhrase); };
+  S.hushChimes = function (sec) { if (chime) chime.next = W.t + sec; }; // test helper: the clapper rests for a while
+  S.hushCicadas = function (sec) { if (ctx) cicadas.forEach(function (c) { c.next = ctx.currentTime + sec; }); }; // test helper: no calls for a while
   S.warblerNow = function () { if (warbler) warblerSong(); };
   S.strikeAll = function () { if (chime) chime.tubes.forEach(function (t, i) { setTimeout(function () { strike(t, 0.9); }, i * 160); }); };
 })();

@@ -5,7 +5,7 @@
    instead of turning you). The keyboard for naming a room takes the whole panel while you type.
      Go: Endless Clay, back to the forecourt   (later: walk there, jump, search, Dream Journal)
      Make: name this room, speak its name, active subject   (later: the Door tool, recordings, posters)
-     Settings: sound   (later: movement, time of day) */
+     Settings: turning (snap 30° or 45°, smooth gentle or quick), teleport on or off, sound   (later: time of day) */
 (function () {
   'use strict';
   var MP = window.MP, R = MP.R, P = MP.Player;
@@ -41,7 +41,10 @@
         buttons.push(bt(rm.active ? 'Active' : 'Dormant', rm.active ? 'Top tier lit' : 'Make it active', function () { MP.Rooms.setActive(rm.address, !rm.active); }, MP.Naming.canSpeak() ? 40 + half + gap : 40, y0 + bh + gap, MP.Naming.canSpeak() ? half : bw, bh));
       }
     } else {
-      buttons.push(bt('Sound', MP.Sound && MP.Sound.on ? 'On: wind, chimes, water' : 'Off', function () { MP.Sound.toggle(); }, 40, y0, bw, bh));
+      buttons.push(bt('Turning', P.turnLabel() + ' · tap to change', function () { P.cycleTurn(); }, 40, y0, bw, bh));
+      var half2 = (bw - gap) / 2;
+      buttons.push(bt('Teleport', P.settings.teleport ? 'On: stick forward' : 'Off: walk only', function () { P.setTeleport(!P.settings.teleport); }, 40, y0 + bh + gap, half2, bh));
+      buttons.push(bt('Sound', MP.Sound && MP.Sound.on ? 'On' : 'Off', function () { MP.Sound.toggle(); }, 40 + half2 + gap, y0 + bh + gap, half2, bh));
     }
   }
   // Keyboard: big keys, the name so far across the top

@@ -27,6 +27,7 @@
     var right = P.hand('right'); if (!right) return;
     if (beam.parent !== right.ray) right.ray.add(beam);
     if (MP.Panel && MP.Panel.pointing()) return; // the panel has the ray
+    if (MP.Teleport && MP.Teleport.aiming()) return; // so does a teleport arc
     m4.identity().extractRotation(right.ray.matrixWorld);
     ray.origin.setFromMatrixPosition(right.ray.matrixWorld); ray.direction.set(0, 0, -1).applyMatrix4(m4);
     var p = pick(ray);

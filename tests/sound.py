@@ -18,10 +18,13 @@ async def main():
             r['before a click'] = await pg.evaluate('palaceDebug.sound()')
             await pg.mouse.click(500, 200); await pg.wait_for_timeout(1500)
             r['after a click'] = await pg.evaluate('palaceDebug.sound()')
+            await pg.evaluate('palaceDebug.MP.Sound.hushCicadas(60)')  # the cicadas call at random: keep them back until the test calls them
             r['wind level'] = await pg.evaluate('palaceDebug.MP.Sound.level()')
             await pg.evaluate('palaceDebug.place(1.25, 1.0, -14.5, true); palaceDebug.look(Math.PI, 0.35)')  # stand at the door, look up at the chimes
-            await pg.evaluate('palaceDebug.MP.Sound.strikeAll()'); await pg.wait_for_timeout(600)
-            r['chimes ringing'] = await pg.evaluate('palaceDebug.MP.Sound.level()')
+            await pg.evaluate('palaceDebug.MP.Sound.strikeAll()'); await pg.wait_for_timeout(300)
+            rings = []  # the tubes are struck one after another: keep the loudest moment
+            for _ in range(6): rings.append(await pg.evaluate('palaceDebug.MP.Sound.level()')); await pg.wait_for_timeout(150)
+            r['chimes ringing'] = max(rings, key=lambda x: x['chimeBandDb'])
             await pg.evaluate("document.getElementById('card').hidden = true"); await pg.wait_for_timeout(400)
             os.makedirs(os.path.join(ROOT, 'tests', 'shots'), exist_ok=True)
             await pg.screenshot(path=os.path.join(ROOT, 'tests', 'shots', 'chimes.png'))
@@ -29,7 +32,11 @@ async def main():
               MP.R.scene.traverse(o => { if (o.panner && o.parent && o.parent.children.some(c => c.isGroup)) pan = o; });
               const l = MP.R.camera.children.find(c => c.type === 'AudioListener'); l.getWorldPosition(v);
               return { ear: v.toArray().map(x => +x.toFixed(2)), model: pan && pan.panner.panningModel }; })()""")
-            await pg.evaluate('palaceDebug.place(0, -3.2, -60, true)'); await pg.wait_for_timeout(300)
+            # chimes ring a long while and one overtone sits in the cicadas' range: rest the clapper and let them die away first
+            await pg.evaluate('palaceDebug.MP.Sound.hushChimes(60)')
+            # stand a few metres from the first cicada pine (the far ring of pines, well away from the moat's water)
+            await pg.evaluate("(() => { const p = palaceDebug.MP.Nature.trees.filter(t => t.kind === 'pine')[0], d = Math.hypot(p.x, p.z), k = (d - 8) / d; palaceDebug.place(p.x * k, p.y, p.z * k, true); })()")
+            for _ in range(3): await pg.screenshot(); await pg.wait_for_timeout(400)  # headless pages draw only when asked: a frame moves the ear
             r['cicadas quiet'] = await pg.evaluate('palaceDebug.MP.Sound.level()')
             await pg.evaluate('palaceDebug.MP.Sound.cicadaNow()'); await pg.wait_for_timeout(900)
             r['cicadas calling'] = await pg.evaluate('palaceDebug.MP.Sound.level()')
