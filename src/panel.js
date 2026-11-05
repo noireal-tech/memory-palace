@@ -3,7 +3,7 @@
    them like the faces of a prism. Two ways to flip: tap a name in the tab row along the top, or point the right
    controller at the panel and push its stick left or right (while you point at the panel, the stick flips faces
    instead of turning you). The keyboard for naming a room takes the whole panel while you type.
-     Go: Endless Clay, back to the forecourt   (later: walk there, jump, search, Dream Journal)
+     Go: Endless Clay, back to the forecourt, the Central Hall   (later: walk there, jump, search, Dream Journal)
      Make: name this room, speak its name, active subject   (later: the Door tool, recordings, posters)
      Settings: turning (snap 30° or 45°, smooth gentle or quick), teleport on or off, sound   (later: time of day) */
 (function () {
@@ -31,6 +31,7 @@
     if (face === 0) {
       buttons.push(bt('Endless Clay', 'Through the portal', function () { MP.Portal.travel(); }, 40, y0, bw, bh));
       buttons.push(bt('The forecourt', 'Back in front of the keep', function () { MP.arrive(); }, 40, y0 + bh + gap, bw, bh));
+      buttons.push(bt('The Central Hall', 'Inside the gate, by the garden', function () { P.stand(); P.place(0, -7.4, Math.PI); if (MP.Portal) MP.Portal.reset(); }, 40, y0 + 2 * (bh + gap), bw, bh));
     } else if (face === 1) {
       var rm = roomNow();
       if (!rm) { buttons.push(bt('No room near', 'Walk up to a room’s door', function () { }, 40, y0, bw, bh)); buttons[buttons.length - 1].dim = true; }
@@ -180,8 +181,9 @@
   P.onSelect = function (rec) {
     if (MP.awaitTrigger) { MP.awaitTrigger = false; MP.Links.go('clay', 'via=palace'); return; }
     if (MP.Sound) MP.Sound.wake(); // a trigger pull lets sound start
+    if (rec.hand === 'right' && pointing) { if (hover >= 0) { buttons[hover].run(); if (!keyboard) layout(); draw(); } return; }
+    if (MP.Grab && MP.Grab.press(rec, 'trigger')) return; // your hand is on something you can hold
     if (rec.hand !== 'right') return;
-    if (pointing) { if (hover >= 0) { buttons[hover].run(); if (!keyboard) layout(); draw(); } return; }
     if (MP.Interact) MP.Interact.select(rec);
   };
 

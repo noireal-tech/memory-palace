@@ -119,11 +119,23 @@
   // ---------- Walls ----------
   // Plastered walls round a rectangle, dark timber boarding round the bottom, a beam at the top, windows in bays.
   function walls(b, r, y0, y1, opts) {
-    opts = opts || {}; var M = MP.M, h = y1 - y0, boards = opts.boards === undefined ? 0.32 : opts.boards;
-    G.box(b, opts.plaster || M.plaster, r[0], y0, r[1], r[2], y1, r[3], opts.solid !== false);
+    opts = opts || {}; var M = MP.M, h = y1 - y0, boards = opts.boards === undefined ? 0.32 : opts.boards, pl = opts.plaster || M.plaster;
+    // opts.hollow (a wall thickness): four walls round an empty middle instead of one solid block, so it can have an
+    // inside; opts.gap { x0, x1, y1 }: an opening in the south (z-) wall from the floor up to y1, such as a gate
+    var gap = opts.gap, sol = opts.solid !== false;
+    function southBox(mat, za, zb, ya, yb, solid) { // a box across the south side, split round the gap
+      if (!gap || gap.y1 <= ya) { G.box(b, mat, r[0] - (mat === pl ? 0 : e), ya, za, r[2] + (mat === pl ? 0 : e), yb, zb, solid); return; }
+      G.box(b, mat, r[0] - (mat === pl ? 0 : e), ya, za, gap.x0, yb, zb, solid); G.box(b, mat, gap.x1, ya, za, r[2] + (mat === pl ? 0 : e), yb, zb, solid);
+      if (yb > gap.y1) G.box(b, mat, gap.x0, gap.y1, za, gap.x1, yb, zb, false);
+    }
     var e = 0.05, bt = y0 + h * boards;
+    if (opts.hollow) {
+      var t = opts.hollow;
+      southBox(pl, r[1], r[1] + t, y0, y1, sol); G.box(b, pl, r[0], y0, r[3] - t, r[2], y1, r[3], sol);
+      G.box(b, pl, r[0], y0, r[1] + t, r[0] + t, y1, r[3] - t, sol); G.box(b, pl, r[2] - t, y0, r[1] + t, r[2], y1, r[3] - t, sol);
+    } else G.box(b, pl, r[0], y0, r[1], r[2], y1, r[3], sol);
     if (boards > 0) { // the boarding stands slightly proud of the plaster
-      G.box(b, M.timber, r[0] - e, y0, r[1] - e, r[2] + e, bt, r[1]); G.box(b, M.timber, r[0] - e, y0, r[3], r[2] + e, bt, r[3] + e);
+      southBox(M.timber, r[1] - e, r[1], y0, bt, false); G.box(b, M.timber, r[0] - e, y0, r[3], r[2] + e, bt, r[3] + e);
       G.box(b, M.timber, r[0] - e, y0, r[1], r[0], bt, r[3]); G.box(b, M.timber, r[2], y0, r[1], r[2] + e, bt, r[3]);
     }
     var beam = opts.beam || M.timber;
@@ -138,13 +150,21 @@
         if (opts.skip && opts.skip(dir, cc, ww)) continue;
         var wm = opts.window || M.window;
         if (dir[0] === 'z') G.panel(b, wm, cc, wy, at + out * 0.035, ww, wh, dir); else G.panel(b, wm, at + out * 0.035, wy, cc, ww, wh, dir);
+        if (opts.hollow && opts.inside) { // the same window seen from inside: paper glowing with daylight
+          var ia = at - out * (opts.hollow + 0.03), idir = (dir[0]) + (out > 0 ? '-' : '+'), ih = opts.inside.y !== undefined ? opts.inside.y : wy;
+          if (dir[0] === 'z') G.panel(b, opts.inside.mat, cc, ih, ia, ww, wh, idir); else G.panel(b, opts.inside.mat, ia, ih, cc, ww, wh, idir);
+        }
       }
     });
   }
   // A battered stone base for a building: leaning faces from the ground up to `top`, footprint r at the top.
-  function stoneFoot(b, r, top, bottom) {
-    var d = top - bottom, M = MP.M;
-    [[r[0], r[1], r[2], r[1], [0, 0, -1]], [r[2], r[1], r[2], r[3], [1, 0, 0]], [r[2], r[3], r[0], r[3], [0, 0, 1]], [r[0], r[3], r[0], r[1], [-1, 0, 0]]].forEach(function (s) {
+  // opts.inner: a rectangle left open in the middle (the foot is a ring round a hall); opts.gap [x0, x1]: a passage
+  // through the south face (the gate). Without opts.inner the foot is solid and blocks walking.
+  function stoneFoot(b, r, top, bottom, opts) {
+    opts = opts || {};
+    var d = top - bottom, M = MP.M, sides = [[r[0], r[1], r[2], r[1], [0, 0, -1]], [r[2], r[1], r[2], r[3], [1, 0, 0]], [r[2], r[3], r[0], r[3], [0, 0, 1]], [r[0], r[3], r[0], r[1], [-1, 0, 0]]];
+    if (opts.gap) { var s0 = sides.shift(); sides.unshift([s0[0], s0[1], opts.gap[0], s0[3], s0[4]], [opts.gap[1], s0[1], s0[2], s0[3], s0[4]]); }
+    sides.forEach(function (s) {
       var g = G.sheet(function (a, t) {
         var o = (0.16 * t + 0.06 * t * t) * d, x = MP.lerp(s[0], s[2], a), z = MP.lerp(s[1], s[3], a);
         x += x <= r[0] + 1e-6 ? -o : x >= r[2] - 1e-6 ? o : 0; z += z <= r[1] + 1e-6 ? -o : z >= r[3] - 1e-6 ? o : 0;
@@ -152,39 +172,109 @@
       }, 10, 4, [Math.hypot(s[2] - s[0], s[3] - s[1]) / 3.4, d / 3.4]);
       b.add(M.stone, G.orient(g, s[4]), true);
     });
-    G.floor(b, M.stone, r[0], r[1], r[2], r[3], top);
-    var o = (0.16 + 0.06) * d; MP.World.solid(r[0] - o, r[1] - o, r[2] + o, r[3] + o, top + 30, 'keep');
+    var o = (0.16 + 0.06) * d, n = opts.inner;
+    if (!n) { G.floor(b, M.stone, r[0], r[1], r[2], r[3], top); MP.World.solid(r[0] - o, r[1] - o, r[2] + o, r[3] + o, top + 30, 'keep'); return; }
+    // the top of the ring: four strips round the open middle (the gate passage cuts the south one)
+    if (opts.gap) { G.floor(b, M.stone, r[0], r[1], opts.gap[0], n[1], top); G.floor(b, M.stone, opts.gap[1], r[1], r[2], n[1], top); }
+    else G.floor(b, M.stone, r[0], r[1], r[2], n[1], top);
+    G.floor(b, M.stone, r[0], n[3], r[2], r[3], top); G.floor(b, M.stone, r[0], n[1], n[0], n[3], top); G.floor(b, M.stone, n[2], n[1], r[2], n[3], top);
   }
 
   // ---------- The keep ----------
+  // The hall's inside: polished boards, plaster lit from within over a dark timber wainscot, posts along the walls and
+  // four round pillars, a coffered ceiling, and the stairwell: an opening at the back rising to a closed sliding door
+  // at the Review Hall's floor level (the floors above come later).
+  function hallInside(b) {
+    var M = MP.M, IN = K.IN, F = K.FLOOR, C = K.CEIL, H = K.HOLE, W = MP.World, sk = 0.03, gx = 2.1, gt = K.GATE.h + 0.45;
+    var x0 = IN[0], z0 = IN[1], x1 = IN[2], z1 = IN[3];
+    G.box(b, M.inTimber, x0, 0, z0, x1, F, z1);
+    W.surface(x0, z0, x1, z1, F, 'keep', true);
+    // walls, and the wainscot (to 1 m) just proud of them
+    [[M.inWall, 0, C], [M.inTimber, sk, 1.0]].forEach(function (L) {
+      var mat = L[0], i = L[1], top = L[2];
+      G.box(b, mat, x0, F, z1 - sk - i, x1, top, z1 - i); G.box(b, mat, x0 + i, F, z0, x0 + sk + i, top, z1); G.box(b, mat, x1 - sk - i, F, z0, x1 - i, top, z1);
+      G.box(b, mat, x0, F, z0 + i, -gx, top, z0 + sk + i); G.box(b, mat, gx, F, z0 + i, x1, top, z0 + sk + i);
+      if (top > gt) G.box(b, mat, -gx, gt, z0 + i, gx, top, z0 + sk + i);
+    });
+    // a beam round the top of the walls, and posts at every bay
+    G.box(b, M.inTimber, x0, C - 0.36, z1 - 0.12, x1, C, z1); G.box(b, M.inTimber, x0, C - 0.36, z0, x1, C, z0 + 0.12);
+    G.box(b, M.inTimber, x0, C - 0.36, z0, x0 + 0.12, C, z1); G.box(b, M.inTimber, x1 - 0.12, C - 0.36, z0, x1, C, z1);
+    for (var p = -7.5; p <= 7.6; p += 2.5) {
+      G.box(b, M.inTimber, p - 0.13, F, z1 - 0.2, p + 0.13, C, z1);
+      if (Math.abs(p) > 2.7) G.box(b, M.inTimber, p - 0.13, F, z0, p + 0.13, C, z0 + 0.2);
+    }
+    for (var q = -8.75; q <= 8.8; q += 2.5) { G.box(b, M.inTimber, x0, F, q - 0.13, x0 + 0.2, C, q + 0.13); G.box(b, M.inTimber, x1 - 0.2, F, q - 0.13, x1, C, q + 0.13); }
+    // four round pillars holding up the middle of the span
+    [[-7.2, -6.2], [7.2, -6.2], [-7.2, 5.0], [7.2, 5.0]].forEach(function (c) {
+      G.limb(b, M.inTimber, [c[0], F, c[1]], [c[0], C, c[1]], 0.25, 0.23, 14);
+      G.box(b, M.stone, c[0] - 0.36, 0, c[1] - 0.36, c[0] + 0.36, 0.14, c[1] + 0.36);
+      W.solid(c[0] - 0.3, c[1] - 0.3, c[0] + 0.3, c[1] + 0.3, C, 'keep');
+    });
+    // the ceiling, round the stairwell opening; it stops teleport arcs
+    [[x0, z0, x1, H[1]], [x0, H[3], x1, z1], [x0, H[1], H[0], H[3]], [H[2], H[1], x1, H[3]]].forEach(function (c) {
+      G.box(b, M.inCeil, c[0], C, c[1], c[2], C + 0.12, c[3]); W.solid(c[0], c[1], c[2], c[3], 30, 'keep', C);
+    });
+    // coffers: a grid of beams under the ceiling (none across the opening)
+    for (var bz = -7.95; bz < 7; bz += 2.65) G.box(b, M.inTimber, x0, C - 0.22, bz - 0.09, x1, C, bz + 0.09);
+    for (var bx = -7.2; bx <= 7.3; bx += 2.4) G.box(b, M.inTimber, bx - 0.09, C - 0.22, z0, bx + 0.09, C, bx > H[0] - 0.2 && bx < H[2] + 0.2 ? H[1] : z1);
+    // the stairwell: a shaft up from the opening, lined, lidded, with a beam round its rim
+    var S = K.SHAFT, U = K.UPPER;
+    G.box(b, M.inWall, H[0], C, H[3], H[2], S, H[3] + 0.1); G.box(b, M.inWall, H[0], C, H[1] - 0.1, H[2], S, H[1]);
+    G.box(b, M.inWall, H[0] - 0.1, C, H[1], H[0], S, H[3]); G.box(b, M.inWall, H[2], C, H[1], H[2] + 0.1, S, H[3]);
+    G.box(b, M.inCeil, H[0], S, H[1], H[2], S + 0.1, H[3]);
+    W.solid(H[0] - 0.1, H[3], H[2] + 0.1, H[3] + 0.1, S, 'keep', C); W.solid(H[0] - 0.1, H[1] - 0.1, H[2] + 0.1, H[1], S, 'keep', C);
+    W.solid(H[0] - 0.1, H[1], H[0], H[3], S, 'keep', C); W.solid(H[2], H[1], H[2] + 0.1, H[3], S, 'keep', C); W.solid(H[0], H[1], H[2], H[3], 30, 'keep', S);
+    G.box(b, M.inTimber, H[0] - 0.14, C - 0.2, H[1] - 0.14, H[2] + 0.14, C, H[1]); G.box(b, M.inTimber, H[0] - 0.14, C - 0.2, H[3], H[2] + 0.14, C, H[3] + 0.14);
+    G.box(b, M.inTimber, H[2], C - 0.2, H[1], H[2] + 0.14, C, H[3]);
+    // at the top landing, a closed sliding door into the Review Hall: paper lit from the far side, in a timber frame
+    var dz = (H[1] + H[3]) / 2;
+    G.panel(b, M.shoji, H[0] + 0.02, U + 1.0, dz, 1.0, 1.96, 'x+');
+    G.box(b, M.inTimber, H[0], U, dz - 0.56, H[0] + 0.08, U + 2.1, dz - 0.5); G.box(b, M.inTimber, H[0], U, dz + 0.5, H[0] + 0.08, U + 2.1, dz + 0.56);
+    G.box(b, M.inTimber, H[0], U + 1.98, dz - 0.56, H[0] + 0.08, U + 2.1, dz + 0.56);
+    G.box(b, M.inTimber, H[0], U + 0.94, dz - 0.5, H[0] + 0.06, U + 0.98, dz + 0.5);
+  }
+
+  // The keep's ground floor is the Central Hall: a timber-floored hall inside the stone base and the first tier, entered
+  // through the gate passage. MP.KEEP records its layout for what goes inside it (hall.js, garden.js).
+  var K = MP.KEEP = {
+    IN: [-9.6, -10.6, 9.6, 10.6],    // the hall's inside walls
+    FLOOR: 0.04, CEIL: 6.2,           // floor top and ceiling underside
+    GATE: { x: 2.08, w: 2.06, h: 3.0, z: -11.95 - 0.25, sill: 0.18 }, // hinges at x = ±x, the leaves' outer face at z
+    HOLE: [-5.6, 7.4, 1.2, 8.6], SHAFT: 9.6, UPPER: 7.2 // the stairwell up to the Review Hall's floor level
+  };
   SK.keep = function (group) {
-    var M = MP.M, b = new MP.R.Batch(group), FOOT = 2.2;
-    stoneFoot(b, [-10.4, -11.4, 10.4, 11.4], FOOT, -0.3);
-    // gate: a timber frame set into the stone base's south face, studded doors, a cusped gable roof above
-    var gz = -11.4 - 0.55;
-    G.box(b, M.timber, -2.6, 0, gz - 0.5, -2.1, 3.3, gz + 1.2, true); G.box(b, M.timber, 2.1, 0, gz - 0.5, 2.6, 3.3, gz + 1.2, true);
-    G.box(b, M.timber, -2.8, 3.0, gz - 0.55, 2.8, 3.45, gz + 1.2);
-    G.panel(b, M.gate, -1.03, 1.5, gz - 0.2, 2.06, 3.0, 'z-'); G.panel(b, M.gate, 1.03, 1.5, gz - 0.2, 2.06, 3.0, 'z-');
-    G.box(b, M.timber, -2.1, 0, gz - 0.19, 2.1, 0.18, gz + 0.4);
-    karahafu(b, 0, gz, 6.6, 3.55, 1.25, 2.4, -1, 3.45);
-    // first tier
-    var t1 = [-10, -11, 10, 11];
-    walls(b, t1, FOOT, 6.4, { bay: 2.5 });
+    var M = MP.M, b = new MP.R.Batch(group), FOOT = 2.2, W = MP.World, IN = K.IN, r = [-10.4, -11.4, 10.4, 11.4], o = 0.22 * (FOOT + 0.3);
+    var t1 = [-10, -11, 10, 11], gz = -11.4 - 0.55, PX = 2.1;
+    stoneFoot(b, r, FOOT, -0.3, { inner: IN, gap: [-2.35, 2.35] });
+    // the stone and walls round the hall block walking; the gate passage is the way in
+    W.solid(r[0] - o, r[1] - o, -PX, IN[1], 30, 'keep'); W.solid(PX, r[1] - o, r[2] + o, IN[1], 30, 'keep');
+    W.solid(r[0] - o, IN[3], r[2] + o, r[3] + o, 30, 'keep'); W.solid(r[0] - o, IN[1], IN[0], IN[3], 30, 'keep'); W.solid(IN[2], IN[1], r[2] + o, IN[3], 30, 'keep');
+    // gate: a timber frame whose posts and lintel line the passage through to the hall; the leaves are in hall.js
+    G.box(b, M.timber, -2.6, 0, gz - 0.5, -PX, 3.3, IN[1] + 0.03, true, 'keep'); G.box(b, M.timber, PX, 0, gz - 0.5, 2.6, 3.3, IN[1] + 0.03, true, 'keep');
+    G.box(b, M.timber, -2.8, K.GATE.h, gz - 0.55, 2.8, 3.45, IN[1] + 0.03);
+    W.solid(-PX, gz - 0.55, PX, IN[1], 30, 'keep', K.GATE.h); // the lintel: a teleport arc stops on it
+    G.box(b, M.timber, -PX, 0, gz - 0.19, PX, K.GATE.sill, gz + 0.4);                 // the sill
+    G.box(b, M.paving, -PX, 0, gz + 0.4, PX, K.FLOOR, IN[1] + 0.03);                     // the passage floor
+    W.surface(-PX, gz - 0.19, PX, gz + 0.4, K.GATE.sill, 'keep', true); W.surface(-PX, gz + 0.4, PX, IN[1] + 0.03, K.FLOOR, 'keep', true);
+    karahafu(b, 0, gz, 6.6, 3.55, 1.25, 0.95, -1, 3.45); // its back ends at the wall, not in the hall
+    // first tier: hollow walls over the hall, with paper windows glowing on the inside too
+    walls(b, t1, FOOT, 6.4, { bay: 2.5, hollow: 0.4, solid: false, gap: { x0: -PX, x1: PX, y1: K.GATE.h + 0.45 }, inside: { mat: M.shoji, y: 4.85 } });
+    hallInside(b);
     skirt(b, [-11.9, -12.9, 11.9, 12.9], [-7.6, -8.6, 7.6, 8.6], 6.2, 7.5, 0.6);
     dormer(b, 'z-', -11.3, 0, 7.2, 6.75, 2.6, 3.2); dormer(b, 'z+', 11.3, 0, 7.2, 6.75, 2.6, 3.2);
     dormer(b, 'x-', -10.3, -4.5, 4.4, 6.7, 1.7, 2.4); dormer(b, 'x-', -10.3, 4.5, 4.4, 6.7, 1.7, 2.4);
     dormer(b, 'x+', 10.3, -4.5, 4.4, 6.7, 1.7, 2.4); dormer(b, 'x+', 10.3, 4.5, 4.4, 6.7, 1.7, 2.4);
     // second tier
-    walls(b, [-7.6, -8.6, 7.6, 8.6], 7.2, 10.8, { bay: 2.2, odd: true, boards: 0.26 });
+    walls(b, [-7.6, -8.6, 7.6, 8.6], 7.2, 10.8, { bay: 2.2, odd: true, boards: 0.26, hollow: 0.4, solid: false }); // hollow: the Review Hall's floor, later
     skirt(b, [-9.4, -10.4, 9.4, 10.4], [-5.6, -6.6, 5.6, 6.6], 10.6, 11.8, 0.55);
     dormer(b, 'x-', -8.4, 0, 6.2, 11.0, 2.2, 2.8); dormer(b, 'x+', 8.4, 0, 6.2, 11.0, 2.2, 2.8);
     karahafu(b, 0, -9.8, 5.2, 11.05, 1.15, 2.6, -1);
     // third tier: gold leaf on the beams and boarding
-    walls(b, [-5.6, -6.6, 5.6, 6.6], 11.5, 14.6, { bay: 2.2, every: 1, boards: 0.22, beam: M.goldLeaf, winW: 0.9 });
+    walls(b, [-5.6, -6.6, 5.6, 6.6], 11.5, 14.6, { bay: 2.2, every: 1, boards: 0.22, beam: M.goldLeaf, winW: 0.9, solid: false });
     skirt(b, [-7.2, -8.2, 7.2, 8.2], [-4.2, -5.0, 4.2, 5.0], 14.4, 15.4, 0.5);
     // crown: a lookout tier with a balcony rail, under a hip-and-gable roof with its gable facing the gate
     var t4 = [-4.2, -5.0, 4.2, 5.0];
-    walls(b, t4, 15.2, 18.0, { bay: 2.1, every: 1, boards: 0, winY: 1.45, winH: 1.5, winW: 1.2 });
+    walls(b, t4, 15.2, 18.0, { bay: 2.1, every: 1, boards: 0, winY: 1.45, winH: 1.5, winW: 1.2, solid: false });
     G.box(b, M.timber, t4[0] - 0.9, 15.15, t4[1] - 0.9, t4[2] + 0.9, 15.35, t4[3] + 0.9);
     [[t4[0] - 0.85, t4[1] - 0.85, t4[2] + 0.85, t4[1] - 0.75], [t4[0] - 0.85, t4[3] + 0.75, t4[2] + 0.85, t4[3] + 0.85], [t4[0] - 0.85, t4[1] - 0.85, t4[0] - 0.75, t4[3] + 0.85], [t4[2] + 0.75, t4[1] - 0.85, t4[2] + 0.85, t4[3] + 0.85]]
       .forEach(function (r) { G.box(b, M.timber, r[0], 16.15, r[1], r[2], 16.3, r[3]); });

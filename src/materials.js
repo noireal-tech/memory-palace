@@ -35,6 +35,11 @@
     // lit from within: the placeholder rooms' surfaces glow softly so they read as lamp-lit, without real lights
     M.inWall = tex(T.plaster, tileOf(T.plaster, [3, 3]), { color: new THREE.Color('#e9e1d2'), emissive: new THREE.Color('#5a4a38'), emissiveMap: T.plaster.map, emissiveIntensity: 0.55 });
     M.inFloor = tex(T.paving, tileOf(T.paving, [6, 6]), { color: new THREE.Color('#e6d6bc'), emissive: new THREE.Color('#6e5a42'), emissiveMap: T.paving.map, emissiveIntensity: 0.6, envMapIntensity: 0.3 }); // a pale stone floor
+    // the Central Hall inside the keep: boards and a ceiling that read as lamp-lit, like the rooms' insides
+    // (the timber photo is dark weathered board: indoors the wood glows warm on its own and the photo only adds grain)
+    M.inTimber = tex(T.timber, tileOf(T.timber, [1.6, 1.6]), { color: new THREE.Color('#ffffff'), emissive: new THREE.Color('#4e3b28'), emissiveIntensity: 1.0, roughness: 0.72, envMapIntensity: 0.1 });
+    M.inCeil = tex(T.timber, [1.2, 1.2], { color: new THREE.Color('#ffffff'), emissive: new THREE.Color('#5a4632'), emissiveIntensity: 1.0, envMapIntensity: 0.1 });
+    M.iron = std({ color: new THREE.Color('#3a3530'), metalness: 0.85, roughness: 0.45 }); // the gate's rings and studs
     M.gold = std({ color: new THREE.Color('#d8b25a'), metalness: 1, roughness: 0.3 });
     M.goldLeaf = std({ color: new THREE.Color('#c9a24a'), metalness: 0.85, roughness: 0.42, envMapIntensity: 1.2 });
     M.bronze = std({ color: new THREE.Color('#6f5233'), metalness: 1, roughness: 0.38 });

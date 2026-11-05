@@ -51,7 +51,8 @@
 
   // ---------- Wind chimes at the front door ----------
   // Five tubes tuned to a pentatonic chord; a tube rings with the partials of a free metal bar (1, 2.756, 5.404, 8.933).
-  var CHIME = { at: [1.25, 3.0, -12.38], notes: [880, 987.8, 1108.7, 1318.5, 1480] }; // A5 B5 C#6 E6 F#6
+  var CHIME = { at: [2.95, 3.45, -12.4],  // under the corner of the gate's roof, clear of the leaves' swing
+                notes: [880, 987.8, 1108.7, 1318.5, 1480] }; // A5 B5 C#6 E6 F#6
   var chime = null, chimeBus = null;
   function buildChimes(group) {
     var M = MP.M, g = new THREE.Group(); g.position.fromArray(CHIME.at); group.add(g);
@@ -123,6 +124,33 @@
     shimmer.connect(bp); bp.connect(sg); sg.connect(g);
     var o = new THREE.Object3D(); o.position.set(MP.RING.x, MP.RING.y, MP.RING.z); group.add(o); positional(o, g, 1.5, 2, 30);
   }
+
+  // ---------- The cascade in the Central Hall: a steady trickle, and drops plinking into the pool ----------
+  var cascade = null, scrapeG = null;
+  function makeCascade(group) {
+    var bus = ctx.createGain(); bus.gain.value = 1;
+    var src = loop(noiseBuffer(5, false)), hp = ctx.createBiquadFilter(), bp = ctx.createBiquadFilter(), g = ctx.createGain(), lfo = ctx.createOscillator(), dep = ctx.createGain();
+    hp.type = 'highpass'; hp.frequency.value = 700; bp.type = 'bandpass'; bp.frequency.value = 2100; bp.Q.value = 0.6; g.gain.value = 0.22;
+    lfo.frequency.value = 1.3; dep.gain.value = 0.06; lfo.connect(dep); dep.connect(g.gain); lfo.start(); // the trickle wavers
+    src.connect(hp); hp.connect(bp); bp.connect(g); g.connect(bus);
+    var low = loop(noiseBuffer(6, true)), lp = ctx.createBiquadFilter(), lg = ctx.createGain(); lp.type = 'lowpass'; lp.frequency.value = 480; lg.gain.value = 0.16; // the splash into the pool
+    low.connect(lp); lp.connect(lg); lg.connect(bus);
+    var o = new THREE.Object3D(); o.position.set(MP.Hall.BASIN.x, 0.8, MP.Hall.BASIN.z); group.add(o); positional(o, bus, 1.6, 1.3, 45);
+    cascade = { bus: bus, next: 0, inside: null };
+    // raking: a soft scrape of tines through sand, heard as if from your own hands
+    var sc = loop(noiseBuffer(3, false)), sbp = ctx.createBiquadFilter(); sbp.type = 'bandpass'; sbp.frequency.value = 3600; sbp.Q.value = 0.8;
+    scrapeG = ctx.createGain(); scrapeG.gain.value = 0; sc.connect(sbp); sbp.connect(scrapeG); scrapeG.connect(master);
+  }
+  function drip() { // a drop: a short rising "plink"
+    var t = ctx.currentTime + 0.01, o = ctx.createOscillator(), g = ctx.createGain(), f = 1100 + Math.random() * 1200;
+    o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(f * 1.5, t + 0.05);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.03 + Math.random() * 0.05, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.08);
+    o.connect(g); g.connect(cascade.bus); o.start(t); o.stop(t + 0.09);
+    cascade.next = ctx.currentTime + 0.05 + Math.random() * Math.random() * 0.4;
+  }
+  S.scrape = function (v) { if (scrapeG) scrapeG.gain.setTargetAtTime(v * 0.1, ctx.currentTime, 0.04); };
+  // inside the keep, the wind outside is muffled
+  function indoors() { if (!MP.KEEP) return false; var h = MP.Player.head(new THREE.Vector3()), I = MP.KEEP.IN; return h.x > I[0] && h.x < I[2] && h.z > I[1] && h.z < I[3] && h.y < MP.KEEP.SHAFT + 0.5; }
 
   // ---------- Leaves: a few rustle sources that follow the trees nearest you ----------
   var rustles = [], RUSTLE_N = 4, rustleAcc = 0;
@@ -247,6 +275,7 @@
       chimeBus = ctx.createGain(); chimeBus.gain.value = 1;
       positional(chime.group, chimeBus, 2.5, 1.1, 90);
       makeWind(); makeWater(group); makeHum(group); makeRustles(group); makeCicadas(group); makeWarbler(group); makeSteps();
+      if (MP.Hall) makeCascade(group);
       S.ready = true;
     }
     if (ctx.state !== 'running') ctx.resume();
@@ -261,11 +290,16 @@
       cicadas.forEach(function (c) { if (ctx.currentTime >= c.next) cicadaPhrase(c); });
       if (warbler && ctx.currentTime >= warbler.next) warblerSong();
     }
-    if (wind.g && ctx) { var gu = W.gust, t = ctx.currentTime; wind.g.gain.setTargetAtTime(0.02 + gu * gu * 0.08, t, 0.4); wind.bp.frequency.setTargetAtTime(320 + gu * 900, t, 0.6); }
+    var isIn = indoors();
+    if (cascade) { // the cascade is heard in the hall; outside the keep's walls only the faintest trickle reaches you
+      if (isIn !== cascade.inside) { cascade.inside = isIn; cascade.bus.gain.setTargetAtTime(isIn ? 1 : 0.06, ctx.currentTime, 0.3); }
+      if (isIn && S.on && ctx.currentTime >= cascade.next) drip();
+    }
+    if (wind.g && ctx) { var gu = W.gust, t = ctx.currentTime, inside = isIn ? 0.3 : 1; wind.g.gain.setTargetAtTime((0.02 + gu * gu * 0.08) * inside, t, 0.4); wind.bp.frequency.setTargetAtTime(320 + gu * 900, t, 0.6); }
   }
   ['pointerdown', 'keydown', 'click'].forEach(function (ev) { addEventListener(ev, function () { S.wake(); }, { capture: true }); });
   R.onSession('start', function () { S.wake(); });
-  S.debug = function () { return { ready: S.ready, state: ctx && ctx.state, on: S.on, gust: Math.round(W.gust * 100) / 100, chimeSwing: chime && Math.round(chime.swing * 100) / 100 }; };
+  S.debug = function () { return { cascade: !!cascade, ready: S.ready, state: ctx && ctx.state, on: S.on, gust: Math.round(W.gust * 100) / 100, chimeSwing: chime && Math.round(chime.swing * 100) / 100 }; };
   // test helper: loudness now (RMS) and the strongest frequency
   S.level = function () {
     if (!S.analyser) return null; var a = S.analyser, d = new Float32Array(a.fftSize), f = new Float32Array(a.frequencyBinCount); a.getFloatTimeDomainData(d); a.getFloatFrequencyData(f);

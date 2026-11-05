@@ -30,6 +30,10 @@ offline cache list (`sw.js`).
 | `src/links.js` | Going between this app and Endless Clay (an Android app link when installed, a page change in a browser). |
 | `src/player.js` | Walking, turning (snap 30° or 45°, smooth gentle or quick), the controllers, flat-screen controls; movement settings kept on the device. |
 | `src/teleport.js` | Teleport: right stick forward aims a thrown arc, letting go blinks you there; refuses water, walls, roofs and tight spots. Space on a flat screen. |
+| `src/grab.js` | Holding things: grip (or trigger with your hand on it) takes the nearest thing in reach; a buzz says when you can. |
+| `src/gate.js` | The keep's gate: iron rings you grip and pull to swing each leaf open, inner rings to pull it shut; kept on the device. |
+| `src/hall.js` | The Central Hall: the cascade at its centre, the zigzag stair on the back wall, the bench (sit facing the garden or away), floor lanterns. |
+| `src/garden.js` | The zen garden: sand that keeps every groove, the rake on its rack, rocks to move, the settings stand (rocks, sand colour, tines, smooth). |
 | `src/portal.js` | The ring portal in the forecourt. |
 | `src/sound.js` | Spatial sound, all made live: wind, wind chimes at the front door, moat water, the portal's hum, rustling leaves in the nearest trees, evening cicadas, a bush warbler, footsteps that know the ground. |
 | `src/interact.js` | Pointing at things in the world (doors, plaques): the right controller's ray and trigger, or a click. |
@@ -46,6 +50,7 @@ offline cache list (`sw.js`).
     python3 tests/detail.py     # the 25 m detail bubble (full resolution only near you)
     python3 tests/sound.py      # spatial sound: starts on a click, chimes, cicadas, footsteps, the Sound switch
     python3 tests/rooms.py      # room facades, doors, placeholder rooms, naming, the active tier, panel faces
+    python3 tests/hall.py       # the gate, walking in, the stair, raking, rocks, the stand, the bench (and real grabs in an emulated Quest)
     python3 tests/move.py       # teleport (where it lands and where it won't), the blink, snap and smooth turn, Settings
 
 ## The Quest app

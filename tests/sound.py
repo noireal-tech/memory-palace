@@ -20,7 +20,7 @@ async def main():
             r['after a click'] = await pg.evaluate('palaceDebug.sound()')
             await pg.evaluate('palaceDebug.MP.Sound.hushCicadas(60)')  # the cicadas call at random: keep them back until the test calls them
             r['wind level'] = await pg.evaluate('palaceDebug.MP.Sound.level()')
-            await pg.evaluate('palaceDebug.place(1.25, 1.0, -14.5, true); palaceDebug.look(Math.PI, 0.35)')  # stand at the door, look up at the chimes
+            await pg.evaluate('palaceDebug.place(2.95, 1.4, -14.5, true); palaceDebug.look(Math.PI, 0.35)')  # stand at the door, look up at the chimes
             await pg.evaluate('palaceDebug.MP.Sound.strikeAll()'); await pg.wait_for_timeout(300)
             rings = []  # the tubes are struck one after another: keep the loudest moment
             for _ in range(6): rings.append(await pg.evaluate('palaceDebug.MP.Sound.level()')); await pg.wait_for_timeout(150)

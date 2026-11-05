@@ -36,7 +36,7 @@
   P.turn = function (a) { var h = head(new THREE.Vector3()); rig.position.sub(h); rig.position.applyAxisAngle(up, a); rig.position.add(h); rig.rotation.y += a; };
 
   function settle() {
-    if (P.hold) return;
+    if (P.hold || P.seat) return;
     var h = head(tmp), g = W.groundAt(h.x, h.z); if (g !== g) return;
     rig.position.y += (g - rig.position.y) * 0.35; if (Math.abs(g - rig.position.y) < 0.01) rig.position.y = g;
   }
@@ -61,6 +61,10 @@
     c.addEventListener('connected', function (e) { rec.src = e.data; rec.hand = e.data.handedness; });
     c.addEventListener('disconnected', function () { rec.src = null; rec.hand = ''; });
     c.addEventListener('selectstart', function () { if (P.onSelect) P.onSelect(rec); });
+    // grabbing (grab.js): the grip button, or the trigger when your hand is on something you can hold
+    c.addEventListener('selectend', function () { if (MP.Grab) MP.Grab.release(rec, 'trigger'); });
+    c.addEventListener('squeezestart', function () { if (MP.Grab) MP.Grab.press(rec, 'grip'); });
+    c.addEventListener('squeezeend', function () { if (MP.Grab) MP.Grab.release(rec, 'grip'); });
     rig.add(c, grip);
     // a simple controller: a dark rounded handle
     var body = new THREE.Mesh(new THREE.CapsuleGeometry(0.018, 0.09, 4, 10), new THREE.MeshStandardMaterial({ color: 0x222428, roughness: 0.5 }));
@@ -73,7 +77,8 @@
     var f = 0, s = 0;
     pads.forEach(function (p) {
       var gp = p.src && p.src.gamepad; if (!gp) return; var ax = gp.axes, sx = ax[2] || 0, sy = ax[3] || 0;
-      if (p.hand === 'left') { if (Math.hypot(sx, sy) > 0.15) { f = -sy; s = sx; } }
+      if (P.seat && (p.hand === 'left' ? Math.hypot(sx, sy) > 0.5 : Math.abs(sy) > 0.6)) P.stand(); // moving the stick stands you up
+      if (p.hand === 'left') { if (Math.hypot(sx, sy) > 0.15 && !P.seat) { f = -sy; s = sx; } }
       else if (p.hand === 'right') {
         if (MP.Panel && MP.Panel.pointing()) { if (MP.Teleport) MP.Teleport.cancel(); return; } // pointing at the panel: the stick flips its faces
         // stick forward aims a teleport; let go to land there
@@ -101,8 +106,19 @@
     rig.rotation.y = P.flatYaw; camera.rotation.set(P.flatPitch, 0, 0);
     var f = (keys.has('w') || keys.has('arrowup') ? 1 : 0) - (keys.has('s') || keys.has('arrowdown') ? 1 : 0);
     var s = (keys.has('d') || keys.has('arrowright') ? 1 : 0) - (keys.has('a') || keys.has('arrowleft') ? 1 : 0);
-    P.move(dt, f, s);
+    if (P.seat && (f || s)) P.stand();
+    P.move(dt, P.seat ? 0 : f, P.seat ? 0 : s);
   }
+  // ---------- Sitting (the garden bench) ----------
+  // Sit at (x, z) facing yaw with your eyes at eye metres: in the headset the view drops to that height whatever your
+  // real height; moving the stick stands you up again.
+  P.seat = null;
+  P.sit = function (x, z, yaw, eye) {
+    P.place(x, z, yaw); P.seat = { x: x, z: z, eye: eye };
+    var local = renderer.xr.isPresenting ? camera.position.y : MP.EYE; rig.position.y = eye - local;
+  };
+  P.stand = function () { if (!P.seat) return; P.seat = null; var h = head(tmp), g = W.groundAt(h.x, h.z); rig.position.y = g === g ? g : 0; };
+  R.onFrame(function () { if (P.seat && renderer.xr.isPresenting) rig.position.y = P.seat.eye - camera.position.y; }); // keep the seated eye height as you shift
   P.enabled = false;
   R.onFrame(function (dt) { if (!P.enabled) return; if (renderer.xr.isPresenting) vrInput(dt); else flatInput(dt); });
   R.onSession('start', function () { rig.rotation.y = P.flatYaw; });

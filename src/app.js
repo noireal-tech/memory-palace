@@ -3,8 +3,16 @@
 (function () {
   'use strict';
   var MP = window.MP, R = MP.R, P = MP.Player, $ = MP.$;
-  var groups = { site: new THREE.Group(), keep: new THREE.Group() };
-  R.scene.add(groups.site, groups.keep);
+  var groups = { site: new THREE.Group(), keep: new THREE.Group(), hall: new THREE.Group() };
+  R.scene.add(groups.site, groups.keep, groups.hall);
+  // The hall's furnishings are drawn only when you could see them: inside the keep, or outside in front of an open gate.
+  var hp = new THREE.Vector3();
+  R.onFrame(function () {
+    if (!MP.ready || !MP.KEEP) return;
+    P.head(hp); var I = MP.KEEP.IN, inside = hp.x > I[0] - 0.5 && hp.x < I[2] + 0.5 && hp.z > I[1] - 2 && hp.z < I[3] + 0.5;
+    var open = MP.Gate && MP.Gate.angles().some(function (a) { return a > 0.03; });
+    groups.hall.visible = inside || (open && hp.z < I[1] && Math.hypot(hp.x, hp.z - I[1]) < 60);
+  });
 
   MP.arrive = function () { var a = MP.SITE.ARRIVE; P.place(a.x, a.z, a.yaw); P.flatPitch = 0.03; MP.Portal && MP.Portal.reset(); };
 
@@ -36,6 +44,9 @@
     MP.SITE.build(groups.site, rnd); await MP.yieldFrame();
     var skin = MP.Skins[MP.params.get('skin') || 'pagoda'] || MP.Skins.pagoda;
     skin.keep(groups.keep); await MP.yieldFrame();
+    // the Central Hall inside the keep: the gate, the cascade, the stair, the bench, the garden
+    R.status('Furnishing the hall…', true);
+    await MP.Gate.build(groups.keep); MP.Hall.build(groups.hall); await MP.yieldFrame(); await MP.Garden.build(groups.hall); await MP.yieldFrame();
     MP.Portal.build(groups.site); MP.Sound.build(groups.site); await MP.yieldFrame();
     R.scene.add(MP.Rooms.group); await MP.Plan.load(); await MP.Rooms.load(); R.status('Raising your rooms…', true); MP.Rooms.build(); await MP.yieldFrame();
     // prepare every material's shaders before the first full frame, in the background where the browser allows it
@@ -74,10 +85,10 @@
 
   if (MP.DEBUG) window.palaceDebug = {
     MP: MP, ready: function () { return !!MP.ready; }, presenting: R.presenting, frames: R.frames,
-    stats: function () { var i = R.renderer.info.render; return { tris: i.triangles, calls: i.calls, meshes: groups.site.children.length + groups.keep.children.length, world: MP.World.counts() }; },
+    stats: function () { var i = R.renderer.info.render; return { tris: i.triangles, calls: i.calls, meshes: groups.site.children.length + groups.keep.children.length + groups.hall.children.length, world: MP.World.counts() }; },
     place: function (x, y, z, hold) { R.rig.position.set(x, y, z); P.hold = !!hold; MP.Portal.reset(); },
     look: function (yaw, pitch) { P.flatYaw = yaw; P.flatPitch = pitch; R.rig.rotation.y = yaw; R.camera.rotation.set(pitch, 0, 0); },
     walk: function (n, f, s) { for (var i = 0; i < n; i++) { P.move(1 / 60, f, s || 0); MP.Portal.check(); } return R.rig.position.toArray(); },
-    lastLink: function () { return MP.lastLink || null; }, detail: function () { MP.Detail.update(true); return MP.Detail.report(); }, sound: function () { return MP.Sound.debug(); }
+    lastLink: function () { return MP.lastLink || null; }, hall: function () { return { gate: MP.Gate.angles(), garden: MP.Garden.report(), seat: MP.Player.seat }; }, detail: function () { MP.Detail.update(true); return MP.Detail.report(); }, sound: function () { return MP.Sound.debug(); }
   };
 })();

@@ -8,7 +8,8 @@
   // A surface's height can be a number or a function of (x, z). NaN means you can't stand there (water).
   var surfaces = [], solids = [];
   var W = MP.World = {
-    surface: function (x0, z0, x1, z1, h, tag) { surfaces.push({ x0: Math.min(x0, x1), z0: Math.min(z0, z1), x1: Math.max(x0, x1), z1: Math.max(z0, z1), h: h, tag: tag || '' }); },
+    // `first`: checked before everything already registered (a stair or a floor laid over a wider surface)
+    surface: function (x0, z0, x1, z1, h, tag, first) { var s = { x0: Math.min(x0, x1), z0: Math.min(z0, z1), x1: Math.max(x0, x1), z1: Math.max(z0, z1), h: h, tag: tag || '' }; if (first) surfaces.unshift(s); else surfaces.push(s); },
     // A solid box blocks walking for anyone whose feet are below its top (minus a step).
     // `bottom` (optional) makes it an overhead slab, such as a ceiling or a lintel: you walk under it, but a teleport arc stops on it.
     solid: function (x0, z0, x1, z1, top, tag, bottom) { solids.push({ x0: Math.min(x0, x1), z0: Math.min(z0, z1), x1: Math.max(x0, x1), z1: Math.max(z0, z1), top: top, tag: tag || '', bottom: bottom == null ? -1e9 : bottom }); },
