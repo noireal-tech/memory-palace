@@ -10,7 +10,7 @@
   // A curved skirt roof between an eave rectangle o (low, outside) and an inner rectangle i (high), four sides.
   // The slope is concave (steeper near the top) and the corners sweep up. Tiles above, rafters below, a white edge.
   function skirt(b, o, i, yE, yT, lift, opts) {
-    opts = opts || {}; var M = MP.M, th = opts.th || 0.28;
+    opts = opts || {}; var M = MP.M, th = opts.th || 0.28, lite = !!opts.lite, na = lite ? 6 : 14, nb = lite ? 3 : 8;
     var oc = [[o[0], o[1]], [o[2], o[1]], [o[2], o[3]], [o[0], o[3]]], ic = [[i[0], i[1]], [i[2], i[1]], [i[2], i[3]], [i[0], i[3]]];
     var outs = [[0, 0, -1], [1, 0, 0], [0, 0, 1], [-1, 0, 0]];
     for (var s = 0; s < 4; s++) {
@@ -21,13 +21,13 @@
         var y = yE + (yT - yE) * Math.pow(t, 1.5) + lift * Math.pow(1 - t, 2) * Math.pow(Math.abs(2 * a - 1), 6);
         return [MP.lerp(ex, nx, t), y + (dy || 0), MP.lerp(ez, nz, t)];
       };
-      b.add(M.roof, G.orient(G.sheet(function (a, t) { return pt(a, t); }, 14, 8, [eaveLen / 2.2, slope / 2.2]), [out[0], 1, out[2]]), true);
-      b.add(M.eave, G.orient(G.sheet(function (a, t) { return pt(a, t * 0.92, -th); }, 14, 4, [eaveLen / 1.2, run / 1.2]), [0, -1, 0]), true);
+      b.add(M.roof, G.orient(G.sheet(function (a, t) { return pt(a, t); }, na, nb, [eaveLen / 2.2, slope / 2.2]), [out[0], 1, out[2]]), true);
+      b.add(M.eave, G.orient(G.sheet(function (a, t) { return pt(a, t * 0.92, -th); }, na, lite ? 1 : 4, [eaveLen / 1.2, run / 1.2]), [0, -1, 0]), true);
       // the eave edge: a white plastered board from the tiles down to the rafters
-      b.add(M.trim, G.orient(G.sheet(function (a, k) { var p = pt(a, 0); return [p[0] + out[0] * 0.02, p[1] - th * k - 0.02, p[2] + out[2] * 0.02]; }, 14, 1, [eaveLen / 3, 0.1]), out), true);
+      b.add(M.trim, G.orient(G.sheet(function (a, k) { var p = pt(a, 0); return [p[0] + out[0] * 0.02, p[1] - th * k - 0.02, p[2] + out[2] * 0.02]; }, na, 1, [eaveLen / 3, 0.1]), out), true);
       // hip ridge: a rounded cap up each corner line
-      var prev = pt(0, 0, 0.08);
-      for (var k = 1; k <= 4; k++) { var nxt = pt(0, k / 4, 0.08); G.limb(b, M.ridge, prev, nxt, 0.17, 0.17, 8); prev = nxt; }
+      var prev = pt(0, 0, 0.08), steps = lite ? 2 : 4;
+      for (var k = 1; k <= steps; k++) { var nxt = pt(0, k / steps, 0.08); G.limb(b, M.ridge, prev, nxt, 0.17, 0.17, lite ? 4 : 8); prev = nxt; }
     }
     if (opts.capTop) G.floor(b, M.roof, i[0], i[1], i[2], i[3], yT + 0.01);
   }
@@ -35,29 +35,30 @@
   // A gable roof over rectangle r at height yB, ridge at yR, running along `axis` ('x' or 'z'), overhanging by ov.
   // The gable ends are white plastered triangles with a dark timber border and a gold ornament.
   function gableRoof(b, r, yB, yR, axis, ov, opts) {
-    opts = opts || {}; var M = MP.M, cx = (r[0] + r[2]) / 2, cz = (r[1] + r[3]) / 2, th = 0.25;
+    opts = opts || {}; var M = MP.M, cx = (r[0] + r[2]) / 2, cz = (r[1] + r[3]) / 2, th = 0.25, lite = !!opts.lite, na = lite ? 4 : 10;
     var along = axis === 'z', L0 = along ? r[1] - ov : r[0] - ov, L1 = along ? r[3] + ov : r[2] + ov, half = (along ? r[2] - r[0] : r[3] - r[1]) / 2 + ov;
     function P(l, w, y) { return along ? [cx + w, y, l] : [l, y, cz + w]; }
     [-1, 1].forEach(function (sd) {
       var span = Math.hypot(half, yR - yB), len = L1 - L0;
       var f = function (a, t, dy) { var w = sd * half * (1 - t), y = yB - 0.15 + (yR - yB + 0.15) * Math.pow(t, 1.25) + (dy || 0); return P(MP.lerp(L0, L1, a), w, y); };
       var out = along ? [sd, 1, 0] : [0, 1, sd];
-      b.add(M.roof, G.orient(G.sheet(function (a, t) { return f(a, t); }, 10, 6, [len / 2.2, span / 2.2]), out), true);
-      b.add(M.eave, G.orient(G.sheet(function (a, t) { return f(a, t, -th); }, 10, 3, [len / 1.2, span / 1.2]), [0, -1, 0]), true);
-      b.add(M.trim, G.orient(G.sheet(function (a, k) { var p = f(a, 0); p[1] -= th * k; return p; }, 10, 1, [len / 3, 0.1]), along ? [sd, 0, 0] : [0, 0, sd]), true);
+      b.add(M.roof, G.orient(G.sheet(function (a, t) { return f(a, t); }, na, lite ? 3 : 6, [len / 2.2, span / 2.2]), out), true);
+      b.add(M.eave, G.orient(G.sheet(function (a, t) { return f(a, t, -th); }, na, lite ? 1 : 3, [len / 1.2, span / 1.2]), [0, -1, 0]), true);
+      b.add(M.trim, G.orient(G.sheet(function (a, k) { var p = f(a, 0); p[1] -= th * k; return p; }, na, 1, [len / 3, 0.1]), along ? [sd, 0, 0] : [0, 0, sd]), true);
     });
     // gable ends: plaster triangle, timber border, gold ornament at the apex
     [[along ? r[1] + 0.3 : r[0] + 0.3, -1], [along ? r[3] - 0.3 : r[2] - 0.3, 1]].forEach(function (e) {
       var l = e[0], hw = half - ov, a = P(l, -hw, yB), c = P(l, hw, yB), t = P(l, 0, yR - 0.25), out = along ? [0, 0, e[1]] : [e[1], 0, 0];
       G.tris(b, M.trim, a.concat(c, t), out);
+      if (lite) return;
       G.limb(b, M.timber, a, t, 0.12, 0.12, 6); G.limb(b, M.timber, c, t, 0.12, 0.12, 6);
       var orn = new THREE.CylinderGeometry(0.42, 0.42, 0.12, 16); orn.rotateX(Math.PI / 2); if (!along) orn.rotateY(Math.PI / 2);
       var op = P(l + e[1] * 0.08, 0, yR - 0.95); orn.translate(op[0], op[1], op[2]); b.add(M.gold, orn);
     });
     // ridge cap and golden roof fish at each end
     var ra = P(L0 + 0.2, 0, yR + 0.12), rb = P(L1 - 0.2, 0, yR + 0.12);
-    G.limb(b, M.ridge, ra, rb, 0.28, 0.28, 10);
-    if (opts.fish !== false) { shachi(b, P(L0 + 0.5, 0, yR + 0.2), along ? 'z' : 'x', 1, opts.fishSize || 1); shachi(b, P(L1 - 0.5, 0, yR + 0.2), along ? 'z' : 'x', -1, opts.fishSize || 1); }
+    G.limb(b, M.ridge, ra, rb, 0.28, 0.28, lite ? 5 : 10);
+    if (opts.fish !== false && !lite) { shachi(b, P(L0 + 0.5, 0, yR + 0.2), along ? 'z' : 'x', 1, opts.fishSize || 1); shachi(b, P(L1 - 0.5, 0, yR + 0.2), along ? 'z' : 'x', -1, opts.fishSize || 1); }
   }
 
   // Shachihoko: a golden carp with its tail in the air, guarding the ridge. Facing along `axis`, toward the middle (dir).
@@ -195,36 +196,76 @@
     return b;
   };
 
-  // A room's facade module (step 2 builds these; the shape is defined here so every skin supplies its own).
-  // A room's facade module, from outside. s = {
+  // ---------- A room's facade module, from outside ----------
+  // s = {
   //   r: [x0, z0, x1, z1] ground-floor footprint (8 x 8 m), street: 'x-' | 'x+' (the side its door faces), zc: door centre,
-  //   wall: plaster material in the band's colour, win: the band's window material,
+  //   wall: plaster material in the band's colour, win: the band's window material, winAspect: its height / width,
   //   tier: 'none' | 'active' | 'shuttered' (a third tier for an active subject; shuttered once it goes dormant),
-  //   group: where the door leaves and plaque go (they move or change, so they aren't merged) }
-  // The ground floor is hollow: walls round a floor, a ceiling, and a door opening on the street side.
-  // Returns { leaves: [left pivot, right pivot], plaque: mesh, inner: [x0, z0, x1, z1] (the room inside) }.
+  //   group: where the door leaves and plaque go (they move or change, so they aren't merged), open: door left open }
+  // Two levels of detail with the same pagoda outline, band colour and windows: SK.module (the full facade: framed
+  // door that swings, brass plaque, finely curved roofs, rafters, ridge caps, roof fish) for the room you're at and
+  // its neighbours, and SK.lite (a few hundred triangles, merged with every other far room) for the rest.
+  // Where you can walk doesn't depend on either: SK.collide sets it once per room.
   var DOOR_W = 2.2, DOOR_H = 2.9, WALL_T = 0.3, F1_H = 4.4;
+  function frame(s) {
+    var r = s.r, out = s.street === 'x+' ? 1 : -1, xs = out > 0 ? r[2] : r[0], sx0 = out > 0 ? r[2] - WALL_T : r[0], bx0 = out > 0 ? r[0] : r[2] - WALL_T;
+    return { r: r, out: out, xs: xs, zc: s.zc, cx: (r[0] + r[2]) / 2, sx0: sx0, sx1: sx0 + WALL_T, bx0: bx0, bx1: bx0 + WALL_T,
+      inner: [r[0] + WALL_T, r[1] + WALL_T, r[2] - WALL_T, r[3] - WALL_T], door: { x: xs, z: s.zc, out: out, w: DOOR_W, h: DOOR_H } };
+  }
+  // The ground floor's walls as boxes [x0, z0, x1, z1]: back, two sides, the street wall either side of the door
+  function wallRects(f) {
+    var r = f.r, zc = f.zc;
+    return [[f.bx0, r[1], f.bx1, r[3]], [r[0], r[1], r[2], r[1] + WALL_T], [r[0], r[3] - WALL_T, r[2], r[3]],
+      [f.sx0, r[1] + WALL_T, f.sx1, zc - DOOR_W / 2], [f.sx0, zc + DOOR_W / 2, f.sx1, r[3] - WALL_T]];
+  }
+  // Returns { inner: [x0, z0, x1, z1] (the room inside), door: { x, z, out, w, h } }; the door blocks the way while shut.
+  SK.collide = function (s, tag) {
+    var f = frame(s), W = MP.World, I = f.inner;
+    wallRects(f).forEach(function (q) { W.solid(q[0], q[1], q[2], q[3], 30, tag); });
+    W.surface(I[0], I[1], I[2], I[3], 0.07, tag);
+    W.surface(f.sx0 - 0.01, f.zc - DOOR_W / 2, f.sx1 + 0.01, f.zc + DOOR_W / 2, 0.05, tag);
+    if (!s.open) SK.doorSolid(s, tag + ':door');
+    return { inner: I, door: f.door };
+  };
+  SK.doorSolid = function (s, tag) { var f = frame(s); MP.World.solid(f.sx0, f.zc - DOOR_W / 2, f.sx1, f.zc + DOOR_W / 2, 30, tag); };
+
+  // The upper storeys, shared by both levels of detail
+  function upper(b, s, f, lite) {
+    var M = MP.M, r = f.r, cx = f.cx, zc = f.zc, c2 = [cx - 3, zc - 3, cx + 3, zc + 3];
+    skirt(b, [r[0] - 0.9, r[1] - 0.9, r[2] + 0.9, r[3] + 0.9], c2, F1_H - 0.05, 5.15, 0.4, { th: 0.22, lite: lite });
+    walls(b, c2, 4.95, 8.0, { solid: false, bay: 2, every: 1, boards: 0, window: s.win, winW: 0.9, winH: 0.9 * s.winAspect, plaster: s.wall });
+    if (s.tier === 'none') {
+      skirt(b, [c2[0] - 0.8, c2[1] - 0.8, c2[2] + 0.8, c2[3] + 0.8], [cx, zc - 0.7, cx, zc + 0.7], 7.95, 10.2, 0.45, { th: 0.2, lite: lite });
+      G.limb(b, M.ridge, [cx, 10.3, zc - 0.9], [cx, 10.3, zc + 0.9], 0.14, 0.14, lite ? 4 : 8);
+    } else { // a third tier: gold on the beams while the subject is active, shuttered once it goes dormant
+      var c3 = [cx - 2.1, zc - 2.1, cx + 2.1, zc + 2.1];
+      skirt(b, [c2[0] - 0.8, c2[1] - 0.8, c2[2] + 0.8, c2[3] + 0.8], c3, 7.95, 8.75, 0.4, { th: 0.2, lite: lite });
+      walls(b, c3, 8.55, 11.0, { solid: false, bay: 2.1, every: 1, boards: 0, window: s.tier === 'active' ? s.win : M.shutter, winW: 1.0, winH: s.tier === 'active' ? s.winAspect : 1.05, plaster: s.wall, beam: s.tier === 'active' ? M.goldLeaf : M.timber });
+      gableRoof(b, [c3[0] - 0.2, c3[1] - 0.2, c3[2] + 0.2, c3[3] + 0.2], 11.0, 12.7, 'z', 0.6, { fishSize: 0.55, fish: s.tier === 'active', lite: lite });
+    }
+  }
+  // Windows in the band's shape: two on each side, two flanking the door
+  function groundWindows(b, s, f, ws) {
+    var r = f.r, wy = 2.35, out = f.out;
+    function win(dir, at, c) { var o = dir[1] === '+' ? 1 : -1; if (dir[0] === 'z') G.panel(b, s.win, c, wy, at + o * 0.02, ws, ws * s.winAspect, dir); else G.panel(b, s.win, at + o * 0.02, wy, c, ws, ws * s.winAspect, dir); }
+    [-1.9, 1.9].forEach(function (d) { win('z-', r[1], f.cx + d); win('z+', r[3], f.cx + d); win(out > 0 ? 'x-' : 'x+', out > 0 ? r[0] : r[2], f.zc + d); });
+    win(s.street, f.xs, f.zc - 2.75); win(s.street, f.xs, f.zc + 2.75);
+  }
+
+  // Full detail. Returns { leaves: [left pivot, right pivot], plaque: mesh }.
   SK.module = function (b, s) {
-    var M = MP.M, r = s.r, out = s.street === 'x+' ? 1 : -1, xs = out > 0 ? r[2] : r[0], zc = s.zc, tag = 'room:' + s.addr;
-    var inner = [r[0] + WALL_T, r[1] + WALL_T, r[2] - WALL_T, r[3] - WALL_T];
+    var M = MP.M, f = frame(s), r = f.r, out = f.out, xs = f.xs, zc = f.zc, inner = f.inner;
     // low stone plinth round the outside, and the walls: boarding below, plaster above; the street wall has the door gap
     [[r[0] - 0.15, r[1] - 0.15, r[2] + 0.15, r[1] + 0.05], [r[0] - 0.15, r[3] - 0.05, r[2] + 0.15, r[3] + 0.15]].forEach(function (q) { G.box(b, M.stone, q[0], 0, q[1], q[2], 0.3, q[3]); });
     var back = out > 0 ? [r[0] - 0.15, r[1], r[0] + 0.05, r[3]] : [r[2] - 0.05, r[1], r[2] + 0.15, r[3]];
     G.box(b, M.stone, back[0], 0, back[1], back[2], 0.3, back[3]);
-    function wallBox(x0, z0, x1, z1, y0, y1) {
-      G.box(b, s.wall, x0, Math.max(y0, 1.0), z0, x1, y1, z1, false);
-      if (y0 < 1.0) G.box(b, M.timber, x0 - 0.02, y0, z0 - 0.02, x1 + 0.02, Math.min(1.0, y1), z1 + 0.02, false);
-      MP.World.solid(x0, z0, x1, z1, 30, tag);
-    }
-    var sx0 = out > 0 ? r[2] - WALL_T : r[0], sx1 = sx0 + WALL_T, bx0 = out > 0 ? r[0] : r[2] - WALL_T, bx1 = bx0 + WALL_T;
-    wallBox(bx0, r[1], bx1, r[3], 0, F1_H);                                // back wall
-    wallBox(r[0], r[1], r[2], r[1] + WALL_T, 0, F1_H); wallBox(r[0], r[3] - WALL_T, r[2], r[3], 0, F1_H); // side walls
-    wallBox(sx0, r[1] + WALL_T, sx1, zc - DOOR_W / 2, 0, F1_H); wallBox(sx0, zc + DOOR_W / 2, sx1, r[3] - WALL_T, 0, F1_H); // street wall either side of the door
-    G.box(b, s.wall, sx0, DOOR_H, zc - DOOR_W / 2, sx1, F1_H, zc + DOOR_W / 2);  // over the door
+    wallRects(f).forEach(function (q) {
+      G.box(b, s.wall, q[0], 1.0, q[1], q[2], F1_H, q[3]);
+      G.box(b, M.timber, q[0] - 0.02, 0, q[1] - 0.02, q[2] + 0.02, 1.0, q[3] + 0.02);
+    });
+    G.box(b, s.wall, f.sx0, DOOR_H, zc - DOOR_W / 2, f.sx1, F1_H, zc + DOOR_W / 2);  // over the door
     G.box(b, M.timber, inner[0], 0.02, inner[1], inner[2], 0.07, inner[3]);   // floor
     G.box(b, M.eave, inner[0], F1_H - 0.12, inner[1], inner[2], F1_H, inner[3]); // ceiling
-    MP.World.surface(inner[0], inner[1], inner[2], inner[3], 0.07, tag);
-    MP.World.surface(Math.min(sx0, sx1) - 0.01, zc - DOOR_W / 2, Math.max(sx0, sx1) + 0.01, zc + DOOR_W / 2, 0.05, tag);
     // the door's timber frame, a beam over it, and the brass plaque above
     var fx0 = Math.min(xs, xs + out * 0.18), fx1 = Math.max(xs, xs + out * 0.18);
     G.box(b, M.timber, fx0, 0, zc - DOOR_W / 2 - 0.22, fx1, DOOR_H + 0.2, zc - DOOR_W / 2);
@@ -233,25 +274,8 @@
     // timber beam round the top of the ground floor
     G.box(b, M.timber, r[0] - 0.07, F1_H - 0.3, r[1] - 0.07, r[2] + 0.07, F1_H, r[1]); G.box(b, M.timber, r[0] - 0.07, F1_H - 0.3, r[3], r[2] + 0.07, F1_H, r[3] + 0.07);
     G.box(b, M.timber, r[0] - 0.07, F1_H - 0.3, r[1], r[0], F1_H, r[3]); G.box(b, M.timber, r[2], F1_H - 0.3, r[1], r[2] + 0.07, F1_H, r[3]);
-    // windows in the band's shape: two on each side, two flanking the door
-    var wy = 2.35, ws = 1.15;
-    function win(dir, at, c) { var o = dir[1] === '+' ? 1 : -1; if (dir[0] === 'z') G.panel(b, s.win, c, wy, at + o * 0.02, ws, ws * s.winAspect, dir); else G.panel(b, s.win, at + o * 0.02, wy, c, ws, ws * s.winAspect, dir); }
-    var cx = (r[0] + r[2]) / 2;
-    [-1.9, 1.9].forEach(function (d) { win('z-', r[1], cx + d); win('z+', r[3], cx + d); win(out > 0 ? 'x-' : 'x+', out > 0 ? r[0] : r[2], zc + d); });
-    win(s.street, xs, zc - 2.75); win(s.street, xs, zc + 2.75);
-    // first roof, then the upper floor
-    var c2 = [cx - 3, zc - 3, cx + 3, zc + 3];
-    skirt(b, [r[0] - 0.9, r[1] - 0.9, r[2] + 0.9, r[3] + 0.9], c2, F1_H - 0.05, 5.15, 0.4, { th: 0.22 });
-    walls(b, c2, 4.95, 8.0, { solid: false, bay: 2, every: 1, boards: 0, window: s.win, winW: 0.9, winH: 0.9 * s.winAspect, plaster: s.wall });
-    if (s.tier === 'none') {
-      skirt(b, [c2[0] - 0.8, c2[1] - 0.8, c2[2] + 0.8, c2[3] + 0.8], [cx, zc - 0.7, cx, zc + 0.7], 7.95, 10.2, 0.45, { th: 0.2 });
-      G.limb(b, M.ridge, [cx, 10.3, zc - 0.9], [cx, 10.3, zc + 0.9], 0.14, 0.14, 8);
-    } else { // a third tier: gold on the beams while the subject is active, shuttered once it goes dormant
-      var c3 = [cx - 2.1, zc - 2.1, cx + 2.1, zc + 2.1];
-      skirt(b, [c2[0] - 0.8, c2[1] - 0.8, c2[2] + 0.8, c2[3] + 0.8], c3, 7.95, 8.75, 0.4, { th: 0.2 });
-      walls(b, c3, 8.55, 11.0, { solid: false, bay: 2.1, every: 1, boards: 0, window: s.tier === 'active' ? s.win : M.shutter, winW: 1.0, winH: s.tier === 'active' ? s.winAspect : 1.05, plaster: s.wall, beam: s.tier === 'active' ? M.goldLeaf : M.timber });
-      gableRoof(b, [c3[0] - 0.2, c3[1] - 0.2, c3[2] + 0.2, c3[3] + 0.2], 11.0, 12.7, 'z', 0.6, { fishSize: 0.55, fish: s.tier === 'active' });
-    }
+    groundWindows(b, s, f, 1.15);
+    upper(b, s, f, false);
     // the door leaves: hinged at the frame, closed across the opening; each a timber slab with the gate's studs
     var leaves = [-1, 1].map(function (sd) {
       var pivot = new THREE.Group(); pivot.position.set(xs - out * 0.02, 0, zc + sd * DOOR_W / 2);
@@ -261,13 +285,28 @@
       pivot.add(leaf); s.group.add(pivot); pivot.userData = { side: sd, out: out, leaf: leaf };
       return pivot;
     });
-    MP.World.solid(Math.min(sx0, sx1), zc - DOOR_W / 2, Math.max(sx0, sx1), zc + DOOR_W / 2, 30, tag + ':door');
     var plaque = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 0.4), s.plaqueMat);
     plaque.position.set(xs + out * 0.225, DOOR_H + 0.55, zc); /* just proud of its backing plate */ plaque.rotation.y = out > 0 ? Math.PI / 2 : -Math.PI / 2; s.group.add(plaque);
     var plate = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.46, 1.58), M.timber); plate.position.set(xs + out * 0.18, DOOR_H + 0.55, zc); s.group.add(plate);
-    return { leaves: leaves, plaque: plaque, inner: inner, door: { x: xs, z: zc, out: out, w: DOOR_W, h: DOOR_H } };
+    return { leaves: leaves, plaque: plaque };
+  };
+
+  // Placeholder detail for far rooms: one plinth, a solid ground floor (timber below, band plaster above), the door
+  // shut (or a dark doorway if you left it open), the band's windows, a beam, and the same storeys and roofs with
+  // coarser curves. Hollow inside isn't needed: you can't see in from this far.
+  SK.lite = function (b, s) {
+    var M = MP.M, f = frame(s), r = f.r, out = f.out, xs = f.xs, zc = f.zc;
+    G.box(b, M.stone, r[0] - 0.15, 0, r[1] - 0.15, r[2] + 0.15, 0.3, r[3] + 0.15);
+    G.box(b, M.timber, r[0], 0.3, r[1], r[2], 1.0, r[3]);
+    G.box(b, s.wall, r[0], 1.0, r[1], r[2], F1_H - 0.3, r[3]);
+    G.box(b, M.timber, r[0] - 0.07, F1_H - 0.3, r[1] - 0.07, r[2] + 0.07, F1_H, r[3] + 0.07);
+    G.panel(b, s.open ? M.doorway : M.doorLeaf, xs + out * 0.02, DOOR_H / 2, zc, DOOR_W, DOOR_H, s.street);
+    var fx0 = Math.min(xs, xs + out * 0.18), fx1 = Math.max(xs, xs + out * 0.18);
+    G.box(b, M.timber, fx0, DOOR_H, zc - DOOR_W / 2 - 0.3, fx1, DOOR_H + 0.28, zc + DOOR_W / 2 + 0.3);
+    groundWindows(b, s, f, 1.15);
+    upper(b, s, f, true);
   };
 
   MP.Skins = MP.Skins || {};
-  MP.Skins.pagoda = { name: 'Japanese pagoda', keep: SK.keep, module: SK.module, parts: { skirt: skirt, gableRoof: gableRoof, dormer: dormer, karahafu: karahafu, walls: walls, stoneFoot: stoneFoot } };
+  MP.Skins.pagoda = { name: 'Japanese pagoda', keep: SK.keep, module: SK.module, lite: SK.lite, collide: SK.collide, doorSolid: SK.doorSolid, parts: { skirt: skirt, gableRoof: gableRoof, dormer: dormer, karahafu: karahafu, walls: walls, stoneFoot: stoneFoot } };
 })();

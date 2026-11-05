@@ -26,13 +26,13 @@ offline cache list (`sw.js`).
 | `src/world.js` | Where you can stand and what blocks the way; geometry helpers. |
 | `src/site.js` | The platform, moat, causeway, stair, forecourt, streets, gardens and hills (the same under every skin). |
 | `src/nature.js` | Cherry trees, pines, shrubs, stone lanterns. |
-| `src/skins/pagoda.js` | The default exterior skin: a Japanese castle keep. Other skins plug in beside it. |
+| `src/skins/pagoda.js` | The default exterior skin: a Japanese castle keep, and the room facade in two levels of detail (full, and a light placeholder with the same pagoda outline). Other skins plug in beside it. |
 | `src/links.js` | Going between this app and Endless Clay (an Android app link when installed, a page change in a browser). |
 | `src/player.js` | Walking, snap turning, the controllers, flat-screen controls. |
 | `src/portal.js` | The ring portal in the forecourt. |
 | `src/sound.js` | Spatial sound, all made live: wind, wind chimes at the front door, moat water, the portal's hum, rustling leaves in the nearest trees, evening cicadas, a bush warbler, footsteps that know the ground. |
 | `src/interact.js` | Pointing at things in the world (doors, plaques): the right controller's ray and trigger, or a click. |
-| `src/rooms.js` | Your rooms from outside: facade modules on the band and row grid, band colours and window shapes, brass plaques, the active tier, doors that stay as you leave them, placeholder rooms furnished only while you're near. |
+| `src/rooms.js` | Your rooms from outside: facade modules on the band and row grid (sixteen unnamed starter rooms until you open a plan), band colours and window shapes, brass plaques, the active tier, doors that stay as you leave them. Only the room you're at and its grid neighbours are built in full detail; the rest are light placeholders merged into a few draws. Placeholder rooms inside are furnished as you approach. |
 | `src/naming.js` | Naming rooms: the panel keyboard, speech where the browser supports it, a text box on a flat screen. |
 | `src/panel.js` | The hand panel above your left wrist: washi paper in a bamboo frame, brush lettering, Go / Make / Settings faces flipped by tab or by pointing and pushing the stick. |
 | `src/app.js` | Start-up, the plan file, the page's card. |
@@ -45,6 +45,7 @@ offline cache list (`sw.js`).
     python3 tests/detail.py     # the 25 m detail bubble (full resolution only near you)
     python3 tests/sound.py      # spatial sound: starts on a click, chimes, cicadas, footsteps, the Sound switch
     python3 tests/rooms.py      # room facades, doors, placeholder rooms, naming, the active tier, panel faces
+    python3 tests/lod.py        # the sixteen starter rooms, full detail only at your room and its neighbours
 
 ## The Quest app
 

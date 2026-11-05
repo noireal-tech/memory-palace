@@ -23,13 +23,18 @@ async def main():
             await pg.goto('http://localhost:8836/index.html?debug&nosw'); await ready(pg)
             await pg.set_input_files('#planFile', files=[{'name': 'plan.json', 'mimeType': 'application/json', 'buffer': json.dumps(PLAN).encode()}]); await pg.wait_for_timeout(1500)
             E = pg.evaluate
+            async def full(addr):   # far rooms are placeholders; wait for the one you're at to come up in full detail
+                for _ in range(60):
+                    if next((x for x in await E('palaceDebug.MP.Rooms.report()') if x['address'] == addr), {}).get('detail') == 'full': return True
+                    await pg.wait_for_timeout(300)
+                return False
             rep = await E('palaceDebug.MP.Rooms.report()')
             r['rooms raised'] = len(rep); r['skipped (on the keep)'] = 'C.W.N1' not in [x['address'] for x in rep]
             r['bands'] = sorted(set(x['band'] for x in rep))
             # stand in the street in front of E1.W.N2's door and click it open
             rm = next(x for x in rep if x['address'] == 'E1.W.N2'); dx, dz = rm['door']; out = rm['out']; inner = rm['inner']
             yaw = out * math.pi / 2   # facing the door from the street
-            await E(f'palaceDebug.place({dx + out * 3.2}, 0, {dz}, false); palaceDebug.look({yaw}, 0)'); await pg.wait_for_timeout(500)
+            await E(f'palaceDebug.place({dx + out * 3.2}, 0, {dz}, false); palaceDebug.look({yaw}, 0)'); r['full detail at the door'] = await full('E1.W.N2'); await pg.wait_for_timeout(500)
             await pg.evaluate("document.getElementById('card').hidden = true")
             await pg.screenshot(path=os.path.join(SHOTS, 'room-door.png'))
             await E(f'palaceDebug.look({yaw} + 0.12, 0)')   # aim at one leaf, not the gap between them
@@ -60,7 +65,7 @@ async def main():
             r['dormant tier'] = next(x for x in await E('palaceDebug.MP.Rooms.report()') if x['address'] == 'E1.W.N2')['tier']
             await E("palaceDebug.MP.Rooms.setActive('E1.W.N2', true)")
             # flat screen: clicking a plaque opens the name box
-            await E(f'palaceDebug.place({dx + out * 3.0}, 0, {dz}, false); palaceDebug.look({yaw}, 0.55)'); await pg.wait_for_timeout(400)
+            await E(f'palaceDebug.place({dx + out * 3.0}, 0, {dz}, false); palaceDebug.look({yaw}, 0.55)'); await full('E1.W.N2'); await pg.wait_for_timeout(400)
             await pg.evaluate("document.getElementById('card').hidden = true")
             await pg.screenshot(path=os.path.join(SHOTS, 'room-plaque.png'))
             r['plaque ahead'] = await E("(() => { const MP = palaceDebug.MP, v = new THREE.Vector3(); MP.R.camera.getWorldDirection(v); const o = new THREE.Vector3().setFromMatrixPosition(MP.R.camera.matrixWorld); const p = MP.Interact.pick(new THREE.Ray(o, v)); return p && p.t.label; })()")
@@ -77,7 +82,7 @@ async def main():
             await b.close()
     finally: srv.terminate()
     for k, v in r.items(): print(k, v)
-    ok = (r['rooms raised'] == 10 and r['skipped (on the keep)'] and r['bands'] == ['C', 'E1', 'E2', 'W1', 'W2'] and r['clicked'] and r['door open']
+    ok = (r['rooms raised'] == 10 and r['full detail at the door'] and r['skipped (on the keep)'] and r['bands'] == ['C', 'E1', 'E2', 'W1', 'W2'] and r['clicked'] and r['door open']
           and r['walked inside'] and r['furnished inside'] and r['current room'] == 'E1.W.N2' and r['back wall stops you']
           and r['panel face'] == 'Make' and 'Name this room' in r['make buttons']
           and r['after reload'] == {'name': 'Solar vortex', 'open': True, 'tier': 'active'} and r['dormant tier'] == 'shuttered'

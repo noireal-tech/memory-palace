@@ -9,10 +9,13 @@
   MP.arrive = function () { var a = MP.SITE.ARRIVE; P.place(a.x, a.z, a.yaw); P.flatPitch = 0.03; MP.Portal && MP.Portal.reset(); };
 
   // ---------- Your plan: picked from a file you keep, stored only on this device ----------
+  // Until you open one, the starter plan stands: sixteen unnamed rooms across the five bands. Naming one of them (or
+  // making it active) keeps the starter as your plan on this headset.
+  function starter() { return { v: 1, starter: true, rooms: MP.Rooms.STARTER.map(function (a) { return { address: a, name: '', wall: null, accent: null, active: false, wasActive: false }; }), at: 0 }; }
   MP.Plan = {
     data: null,
-    save: function () { return MP.Plan.data ? MP.store.set('plan', MP.Plan.data) : Promise.resolve(); },
-    load: function () { return MP.store.get('plan').then(function (p) { MP.Plan.data = p || null; return MP.Plan.data; }); },
+    save: function () { var p = MP.Plan.data; if (!p) return Promise.resolve(); delete p.starter; return MP.store.set('plan', p); },
+    load: function () { return MP.store.get('plan').then(function (p) { MP.Plan.data = p || starter(); return MP.Plan.data; }); },
     importText: function (text) {
       var o = JSON.parse(text), rooms = o && o.rooms;
       if (!Array.isArray(rooms) || !rooms.length) throw new Error('no rooms');
@@ -24,7 +27,7 @@
     }
   };
   function roomsText() { var n = MP.Plan.data ? MP.Plan.data.rooms.length : 0; return n + (n === 1 ? ' room' : ' rooms') + ' in your plan'; }
-  function planNote() { var p = MP.Plan.data; return p ? 'Your plan: ' + p.rooms.length + (p.rooms.length === 1 ? ' room' : ' rooms') + ', kept on this headset only.' : 'No plan yet. Open your palace plan to add your rooms.'; }
+  function planNote() { var p = MP.Plan.data; if (p && p.starter) return 'Sixteen rooms, waiting for names. Open your palace plan to use your own.'; return p ? 'Your plan: ' + p.rooms.length + (p.rooms.length === 1 ? ' room' : ' rooms') + ', kept on this headset only.' : 'No plan yet. Open your palace plan to add your rooms.'; }
 
   // ---------- Building ----------
   async function build() {

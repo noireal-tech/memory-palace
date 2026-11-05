@@ -20,7 +20,12 @@
   D.note = function (mat, g) {
     var set = mat.userData.set; if (!set) return;
     if (!g.boundingBox) g.computeBoundingBox();
-    entry(set).boxes.push(g.boundingBox.clone());
+    var box = g.boundingBox.clone(); entry(set).boxes.push(box);
+    return { set: set, box: box };
+  };
+  // Geometry that has been taken down (a batch cleared): stop counting where it was
+  D.forget = function (notes) {
+    notes.forEach(function (n) { var e = D.sets.get(n.set), i = e ? e.boxes.indexOf(n.box) : -1; if (i >= 0) e.boxes.splice(i, 1); });
   };
 
   function useTextures(e, src) {
