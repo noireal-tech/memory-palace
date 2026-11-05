@@ -53,7 +53,7 @@
   var acc = 0, head = new THREE.Vector3();
   D.update = function (force) {
     if (!MP.ready && !force) return;
-    MP.Player.head(head);
+    if (MP.Closets) MP.Closets.anchor(head); else MP.Player.head(head); // in a closet: from where its doors begin in the palace
     var want = null;
     D.sets.forEach(function (e) {
       var d = Infinity; for (var i = 0; i < e.boxes.length && d > 0; i++) d = Math.min(d, boxDist(e.boxes[i], head));

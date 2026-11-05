@@ -156,7 +156,7 @@
   }
   S.scrape = function (v) { if (scrapeG) scrapeG.gain.setTargetAtTime(v * 0.1, ctx.currentTime, 0.04); };
   // inside the keep, the wind outside is muffled
-  function indoors() { if (!MP.KEEP) return false; var h = MP.Player.head(new THREE.Vector3()), I = MP.KEEP.IN; return h.x > I[0] && h.x < I[2] && h.z > I[1] && h.z < I[3] && h.y < MP.KEEP.SHAFT + 0.5; }
+  function indoors() { if (MP.World.space !== 'world') return true; /* a closet is indoors too */ if (!MP.KEEP) return false; var h = MP.Player.head(new THREE.Vector3()), I = MP.KEEP.IN; return h.x > I[0] && h.x < I[2] && h.z > I[1] && h.z < I[3] && h.y < MP.KEEP.SHAFT + 0.5; }
 
   // ---------- Leaves: a few rustle sources that follow the trees nearest you ----------
   var rustles = [], RUSTLE_N = 4, rustleAcc = 0;

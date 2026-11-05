@@ -18,6 +18,7 @@
   var mark = new THREE.Group(); mark.visible = false; mark.renderOrder = 5;
   var ring = new THREE.Mesh(new THREE.RingGeometry(0.27, 0.33, 48), ringMat); ring.rotation.x = -Math.PI / 2; mark.add(ring);
   var pad = new THREE.Mesh(new THREE.CircleGeometry(0.27, 48), padMat); pad.rotation.x = -Math.PI / 2; mark.add(pad);
+  dots.userData.ui = mark.userData.ui = true; // always drawn, whichever space you're in (closets.js)
   R.scene.add(dots, mark);
   var veil = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 10), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0, side: THREE.BackSide, depthTest: false, depthWrite: false, fog: false, toneMapped: false }));
   veil.renderOrder = 999; veil.visible = false; R.camera.add(veil);

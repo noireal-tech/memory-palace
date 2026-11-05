@@ -6,30 +6,40 @@
 
   // ---------- Ground: surfaces checked in order; the first one that contains the point gives its height ----------
   // A surface's height can be a number or a function of (x, z). NaN means you can't stand there (water).
-  var surfaces = [], solids = [];
+  // Spaces: the palace itself is 'world'; each closet is its own space (closets.js), elsewhere in the coordinates and
+  // seen only through its doorway. Every surface and solid belongs to the space it was made in (W.building), and only
+  // the space you're in (W.space) counts for standing, walking and teleporting.
+  // Passages: an open closet doorway lets you walk up to (and through) a wall that is otherwise solid.
+  var surfaces = [], solids = [], passages = [];
+  function mine(s) { return s.space === W.space; }
   var W = MP.World = {
+    space: 'world', building: 'world',
     // `first`: checked before everything already registered (a stair or a floor laid over a wider surface)
-    surface: function (x0, z0, x1, z1, h, tag, first) { var s = { x0: Math.min(x0, x1), z0: Math.min(z0, z1), x1: Math.max(x0, x1), z1: Math.max(z0, z1), h: h, tag: tag || '' }; if (first) surfaces.unshift(s); else surfaces.push(s); },
+    surface: function (x0, z0, x1, z1, h, tag, first) { var s = { x0: Math.min(x0, x1), z0: Math.min(z0, z1), x1: Math.max(x0, x1), z1: Math.max(z0, z1), h: h, tag: tag || '', space: W.building }; if (first) surfaces.unshift(s); else surfaces.push(s); },
     // A solid box blocks walking for anyone whose feet are below its top (minus a step).
     // `bottom` (optional) makes it an overhead slab, such as a ceiling or a lintel: you walk under it, but a teleport arc stops on it.
-    solid: function (x0, z0, x1, z1, top, tag, bottom) { solids.push({ x0: Math.min(x0, x1), z0: Math.min(z0, z1), x1: Math.max(x0, x1), z1: Math.max(z0, z1), top: top, tag: tag || '', bottom: bottom == null ? -1e9 : bottom }); },
-    drop: function (tag) { surfaces = surfaces.filter(function (s) { return s.tag !== tag; }); solids = solids.filter(function (s) { return s.tag !== tag; }); },
+    solid: function (x0, z0, x1, z1, top, tag, bottom) { solids.push({ x0: Math.min(x0, x1), z0: Math.min(z0, z1), x1: Math.max(x0, x1), z1: Math.max(z0, z1), top: top, tag: tag || '', bottom: bottom == null ? -1e9 : bottom, space: W.building }); },
+    passage: function (x0, z0, x1, z1, tag) { passages.push({ x0: Math.min(x0, x1), z0: Math.min(z0, z1), x1: Math.max(x0, x1), z1: Math.max(z0, z1), tag: tag || '', space: W.building }); },
+    drop: function (tag) { surfaces = surfaces.filter(function (s) { return s.tag !== tag; }); solids = solids.filter(function (s) { return s.tag !== tag; }); passages = passages.filter(function (s) { return s.tag !== tag; }); },
+    // make things inside fn belong to a space
+    within: function (space, fn) { var was = W.building; W.building = space; try { return fn(); } finally { W.building = was; } },
     fallback: 0,
     groundAt: function (x, z) {
       for (var i = 0; i < surfaces.length; i++) {
         var s = surfaces[i];
-        if (x >= s.x0 && x <= s.x1 && z >= s.z0 && z <= s.z1) return typeof s.h === 'function' ? s.h(x, z) : s.h;
+        if (mine(s) && x >= s.x0 && x <= s.x1 && z >= s.z0 && z <= s.z1) return typeof s.h === 'function' ? s.h(x, z) : s.h;
       }
       return W.fallback;
     },
     blocked: function (x, z, feet, r) {
       r = r || 0.25;
-      for (var i = 0; i < solids.length; i++) { var s = solids[i]; if (x > s.x0 - r && x < s.x1 + r && z > s.z0 - r && z < s.z1 + r && feet < s.top - 0.45 && feet + 1.9 > s.bottom) return true; }
+      for (var k = 0; k < passages.length; k++) { var p = passages[k]; if (mine(p) && x > p.x0 && x < p.x1 && z > p.z0 && z < p.z1) return false; } // in an open doorway
+      for (var i = 0; i < solids.length; i++) { var s = solids[i]; if (mine(s) && x > s.x0 - r && x < s.x1 + r && z > s.z0 - r && z < s.z1 + r && feet < s.top - 0.45 && feet + 1.9 > s.bottom) return true; }
       return false;
     },
     // Is the point (x, y, z) inside anything solid? For the teleport arc: walls, trunks, ceilings and lintels.
     inside: function (x, y, z) {
-      for (var i = 0; i < solids.length; i++) { var s = solids[i]; if (x > s.x0 && x < s.x1 && z > s.z0 && z < s.z1 && y < s.top && y > s.bottom) return true; }
+      for (var i = 0; i < solids.length; i++) { var s = solids[i]; if (mine(s) && x > s.x0 && x < s.x1 && z > s.z0 && z < s.z1 && y < s.top && y > s.bottom) return true; }
       return false;
     },
     counts: function () { return { surfaces: surfaces.length, solids: solids.length }; }

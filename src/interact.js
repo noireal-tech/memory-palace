@@ -19,7 +19,7 @@
   // the laser beam and its dot (only drawn while it's on something usable)
   var beam = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(0, 0, -1)]), new THREE.LineBasicMaterial({ color: 0xd4ad55, transparent: true, opacity: 0.8 }));
   beam.visible = false;
-  var dot = new THREE.Mesh(new THREE.SphereGeometry(0.012, 10, 8), new THREE.MeshBasicMaterial({ color: 0xd4ad55 })); dot.visible = false; R.scene.add(dot);
+  var dot = new THREE.Mesh(new THREE.SphereGeometry(0.012, 10, 8), new THREE.MeshBasicMaterial({ color: 0xd4ad55 })); dot.visible = false; dot.userData.ui = true; R.scene.add(dot);
   var ray = new THREE.Ray();
   R.onFrame(function () {
     hover = null; hoverHit = null; beam.visible = false; dot.visible = false;

@@ -4,7 +4,7 @@
   var MP = window.MP;
 
   var canvas = MP.$('#scene');
-  var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, powerPreference: 'high-performance' });
+  var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, stencil: true, powerPreference: 'high-performance' }); // stencil: closet doorways (closets.js)
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 0.7;
@@ -130,7 +130,7 @@
   }
 
   // ---------- Frame loop ----------
-  var hooks = [], last = performance.now(), t0 = last, frameLog = [], errors = 0;
+  var hooks = [], before = [], after = [], last = performance.now(), t0 = last, frameLog = [], errors = 0;
   function onFrame(fn) { hooks.push(fn); }
   function resize() { renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
   addEventListener('resize', resize); resize();
@@ -143,7 +143,9 @@
       try { hooks[i](dt, now, xrFrame); }
       catch (e) { if (errors++ < 5) console.error(e); } // one bad step never stops the headset drawing
     }
+    for (var b = 0; b < before.length; b++) { try { before[b](); } catch (e) { if (errors++ < 5) console.error(e); } }
     renderer.render(scene, camera);
+    for (var j = 0; j < after.length; j++) { try { after[j](); } catch (e) { if (errors++ < 5) console.error(e); } } // more passes into the same frame: what's seen through doorways
   });
 
   // ---------- The headset session ----------
@@ -162,7 +164,7 @@
 
   MP.R = {
     renderer: renderer, scene: scene, camera: camera, rig: rig, sun: sun, sunDir: sunDir, Batch: Batch,
-    onFrame: onFrame, status: status, enterVR: enterVR, onSession: onSession, frames: function () { return frameLog; },
+    onFrame: onFrame, beforeRender: function (fn) { before.push(fn); }, afterRender: function (fn) { after.push(fn); }, status: status, enterVR: enterVR, onSession: onSession, frames: function () { return frameLog; },
     presenting: function () { return renderer.xr.isPresenting; },
     // Drawn once: the sun never moves, so shadows are worked out after a build and then left alone.
     refreshShadows: function () { renderer.shadowMap.needsUpdate = true; }

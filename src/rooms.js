@@ -96,6 +96,7 @@
       Rm.list.push(rm);
     });
     b.flush(); Rm.batch = b;
+    if (MP.Closets && MP.Closets.rebuildRoomDoors) MP.Closets.rebuildRoomDoors(); // closet doors in these rooms' walls
     R.refreshShadows();
   };
   var wallMats = {};
@@ -172,7 +173,7 @@
     });
     // furnish the rooms near you; clear the ones you've left behind
     acc += dt; if (acc < 0.5 || !MP.ready) return; acc = 0;
-    MP.Player.head(head);
+    if (MP.Closets) MP.Closets.anchor(head); else MP.Player.head(head); // in a closet, the room it opens from stays furnished
     Rm.list.forEach(function (rm) {
       var dist = Math.hypot(head.x - rm.door.x, head.z - rm.door.z);
       if (dist < NEAR && (rm.open || inside(rm, head))) ensureInterior(rm);

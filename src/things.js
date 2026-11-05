@@ -255,11 +255,14 @@
 
   // ---------- Placing ----------
   var IN_PAD = 0.35;
-  function inside(x, z) { var I = MP.KEEP.IN; return x > I[0] + IN_PAD && x < I[2] - IN_PAD && z > I[1] + IN_PAD && z < I[3] - IN_PAD; }
+  // where things can stand: the hall's floor, or the room of the closet you're in
+  function area() { return MP.Closets.bounds(MP.World.space); }
+  function inside(x, z) { var I = area(); return x > I[0] + IN_PAD && x < I[2] - IN_PAD && z > I[1] + IN_PAD && z < I[3] - IN_PAD; }
+  function rootOf(space) { return space && space !== 'world' ? MP.Closets.root(space) || group : group; }
   function free(x, z, r) { if (!inside(x, z)) return false; var g = W.groundAt(x, z); return g === g && !W.blocked(x, z, g, r); }
   // the nearest spot (from x, z) where something of radius r can stand
   function spot(x, z, r) {
-    var I = MP.KEEP.IN; x = MP.clamp(x, I[0] + IN_PAD + 0.01, I[2] - IN_PAD - 0.01); z = MP.clamp(z, I[1] + IN_PAD + 0.01, I[3] - IN_PAD - 0.01);
+    var I = area(); x = MP.clamp(x, I[0] + IN_PAD + 0.01, I[2] - IN_PAD - 0.01); z = MP.clamp(z, I[1] + IN_PAD + 0.01, I[3] - IN_PAD - 0.01);
     if (free(x, z, r)) return [x, z];
     for (var d = 0.1; d < 3; d += 0.1) for (var k = 0; k < 16; k++) { var a = k / 16 * Math.PI * 2, px = x + Math.cos(a) * d, pz = z + Math.sin(a) * d; if (free(px, pz, r)) return [px, pz]; }
     return [x, z];
@@ -272,7 +275,7 @@
 
   // ---------- Saving ----------
   var saveTimer = 0;
-  function save() { clearTimeout(saveTimer); saveTimer = setTimeout(function () { MP.store.set('things', { v: 1, next: nextId, list: list.map(function (t) { var p = t.fall ? [t.fall.x, t.fall.y1, t.fall.z] : t.group.position.toArray(); return { id: t.id, kind: t.kind, at: p.map(function (v) { return Math.round(v * 1000) / 1000; }), ry: Math.round(t.group.rotation.y * 1000) / 1000, on: t.on }; }) }); }, 500); }
+  function save() { clearTimeout(saveTimer); saveTimer = setTimeout(function () { MP.store.set('things', { v: 1, next: nextId, list: list.map(function (t) { var p = t.fall ? [t.fall.x, t.fall.y1, t.fall.z] : t.group.position.toArray(); return { id: t.id, kind: t.kind, space: t.space || 'world', at: p.map(function (v) { return Math.round(v * 1000) / 1000; }), ry: Math.round(t.group.rotation.y * 1000) / 1000, on: t.on }; }) }); }, 500); }
 
   // ---------- One thing ----------
   function make(o) {
@@ -281,7 +284,8 @@
     template(o.kind, def.shape).forEach(function (p) { var m = new THREE.Mesh(p.geo, p.mat); m.castShadow = false; m.receiveShadow = true; t.group.add(m); });
     def.parts(t);
     t.anchor = new THREE.Object3D(); t.anchor.position.copy(new THREE.Vector3().fromArray(def.grab[1]).add(new THREE.Vector3().fromArray(def.grab[0])).multiplyScalar(0.5)); t.group.add(t.anchor);
-    t.group.position.fromArray(o.at); t.group.rotation.y = o.ry || 0; group.add(t.group);
+    t.space = o.space && MP.Closets.root(o.space) ? o.space : 'world';
+    t.group.position.fromArray(o.at); t.group.rotation.y = o.ry || 0; rootOf(t.space).add(t.group);
     // what you point at
     var pk = def.pick, pickBox = new THREE.Mesh(geo('pick' + o.kind, function () { var g = new THREE.BoxGeometry(pk[0], pk[1], pk[2]); g.translate(0, pk[1] / 2, 0); return g; }), hidden);
     t.group.add(pickBox);
@@ -297,7 +301,7 @@
       },
       grab: function (rec) { t.fall = null; t.turn = null; rec.grip.attach(t.group); },
       move: function () { },
-      drop: function () { group.attach(t.group); settle(t); }
+      drop: function () { t.space = MP.World.space; rootOf(t.space).attach(t.group); settle(t); } // set down in the space you're in
     });
     def.on(t); list.push(t); MP.Sound.addThing(t);
     return t;
@@ -314,7 +318,7 @@
   T.spawn = function (kind) {
     var P = MP.Player, h = P.head(new THREE.Vector3()), d = new THREE.Vector3(); R.camera.getWorldDirection(d); d.y = 0; if (d.lengthSq() < 1e-4) d.set(0, 0, 1); d.normalize();
     var p = spot(h.x + d.x * 1.2, h.z + d.z * 1.2, Math.min(0.3, K[kind].grab[2] * 0.6));
-    var t = make({ kind: kind, at: [p[0], W.groundAt(p[0], p[1]), p[1]], ry: Math.atan2(-d.x, -d.z), on: true }); // its front toward you
+    var t = make({ kind: kind, space: MP.World.space, at: [p[0], W.groundAt(p[0], p[1]), p[1]], ry: Math.atan2(-d.x, -d.z), on: true }); // its front toward you, in the space you're in
     save(); return t && t.id;
   };
   T.remove = function (t) {
@@ -325,13 +329,14 @@
   // what's in your hand right now, if it's a thing
   T.held = function () { for (var i = 0; i < list.length; i++) if (list[i].item.holder) return list[i]; return null; };
   T.name = function (t) { return NAME[t.kind]; };
-  T.inHall = function () { if (!MP.KEEP) return false; var h = MP.Player.head(new THREE.Vector3()), I = MP.KEEP.IN; return h.x > I[0] && h.x < I[2] && h.z > I[1] && h.z < I[3]; };
+  T.inHall = function () { if (!MP.KEEP || MP.World.space !== 'world') return false; var h = MP.Player.head(new THREE.Vector3()), I = MP.KEEP.IN; return h.x > I[0] && h.x < I[2] && h.z > I[1] && h.z < I[3]; };
+  T.inCloset = function () { return MP.World.space !== 'world'; };
 
   T.build = function (g) {
     group = g; mats = makeMats();
     owned.forEach(function (o) { if (o[1]) { MP.Detail.material(o[0], o[1]); delete o[0].userData.set; } }); // swapped with the rest, never noted
     R.onFrame(function (dt, now) {
-      if (!group.visible) return; // nothing moves while the hall isn't drawn
+      var here = MP.World.space; if (here === 'world' && !group.visible) return; // nothing moves while the hall isn't drawn
       list.forEach(function (t) {
         if (t.fall) { var f = t.fall; f.t = Math.min(1, f.t + dt / 0.22); t.group.position.set(f.x, MP.lerp(f.y0, f.y1, f.t * f.t), f.z); if (f.t >= 1) { t.fall = null; save(); } }
         var def = K[t.kind]; if (def.tick) def.tick(t, dt, now);

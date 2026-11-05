@@ -4,7 +4,8 @@
    controller at the panel and push its stick left or right (while you point at the panel, the stick flips faces
    instead of turning you). The keyboard for naming a room takes the whole panel while you type.
      Go: Endless Clay, back to the forecourt, the Central Hall   (later: walk there, jump, search, Dream Journal)
-     Make: name this room, speak its name, active subject; in the Central Hall: add a thing, put away the one you hold
+     Make: name this room, speak its name, active subject; in the Central Hall: add a thing, put away the one you hold;
+       in a closet: name it; anywhere: the Door tool (closet doors, closets.js)
        (later: the Door tool, recordings, posters)
      Settings: turning (snap 30° or 45°, smooth gentle or quick), teleport on or off, sound, the hall's sound   (later: time of day)
    Adding a thing opens its catalog, which, like the keyboard, takes the whole panel. */
@@ -18,7 +19,7 @@
   holder.add(board); holder.visible = false;
   var ray = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(0, 0, -1)]), new THREE.LineBasicMaterial({ color: 0x2a2018, transparent: true, opacity: 0.8 }));
   ray.visible = false;
-  var dot = new THREE.Mesh(new THREE.SphereGeometry(0.003, 8, 6), new THREE.MeshBasicMaterial({ color: 0xa8342a })); dot.visible = false;
+  var dot = new THREE.Mesh(new THREE.SphereGeometry(0.003, 8, 6), new THREE.MeshBasicMaterial({ color: 0xa8342a })); dot.visible = false; dot.userData.ui = true;
   var BRUSH = '"Kaushan Script", cursive', INK = '#1f1a14', SEAL = '#a8342a';
   var FACES = ['Go', 'Make', 'Settings'], face = 0, keyboard = null, catalog = false, buttons = [], hover = -1, note = 'Forecourt';
 
@@ -37,11 +38,23 @@
       buttons.push(bt('The Central Hall', 'Inside the gate, by the garden', function () { P.stand(); P.place(0, -7.4, Math.PI); if (MP.Portal) MP.Portal.reset(); }, 40, y0 + 2 * (bh + gap), bw, bh));
     } else if (face === 1) {
       var rm = roomNow();
-      var held = MP.Things && MP.Things.held();
-      if (!rm && MP.Things && MP.Things.inHall()) { // in the Central Hall: set things out, put them away
+      var held = MP.Things && MP.Things.held(), half3 = (bw - gap) / 2, tool = MP.Closets && MP.Closets.tool;
+      var doorTool = function (x, y, w) { buttons.push(bt('Door tool', 'A closet door, in a wall', function () { tool.start(); }, x, y, w, bh)); };
+      var putAway = function (x, y, w) {
+        if (held) buttons.push(bt('Put it away', 'The ' + MP.Things.name(held) + ' in your hand', function () { var h = MP.Things.held(); if (h) MP.Things.remove(h); }, x, y, w, bh));
+        else { buttons.push(bt('Put away', 'Hold a thing first', function () { }, x, y, w, bh)); buttons[buttons.length - 1].dim = true; }
+      };
+      if (tool && tool.active) { // placing a closet door: aim at a wall, pull the trigger (or click)
+        buttons.push(bt('Cancel', 'Stop placing the door', function () { tool.stop(); }, 40, y0 + 2 * (bh + gap), bw, bh));
+      } else if (MP.Things && MP.Things.inCloset()) { // in a closet: name it, add doors and things
+        var cl = MP.Closets.current();
+        buttons.push(bt('Name this closet', cl && cl.name ? cl.name : 'Unnamed · ' + (cl ? cl.depth : 1) + ' door' + (cl && cl.depth > 1 ? 's' : '') + ' from the main room', function () { MP.Naming.start(MP.Closets.nameable()); }, 40, y0, bw, bh));
+        doorTool(40, y0 + bh + gap, half3);
+        buttons.push(bt('Add something', 'A lantern, a bell…', function () { catalog = true; }, 40 + half3 + gap, y0 + bh + gap, half3, bh));
+        putAway(40, y0 + 2 * (bh + gap), bw);
+      } else if (MP.Things && MP.Things.inHall()) { // in the Central Hall: set things out, put them away, make closets
         buttons.push(bt('Add to the hall', 'A lantern, a bell, incense, fireflies…', function () { catalog = true; }, 40, y0, bw, bh));
-        if (held) buttons.push(bt('Put it away', 'The ' + MP.Things.name(held) + ' in your hand', function () { var h = MP.Things.held(); if (h) MP.Things.remove(h); }, 40, y0 + bh + gap, bw, bh));
-        else { buttons.push(bt('Hold something to put it away', 'Grip it, then come back here', function () { }, 40, y0 + bh + gap, bw, bh)); buttons[buttons.length - 1].dim = true; }
+        doorTool(40, y0 + bh + gap, half3); putAway(40 + half3 + gap, y0 + bh + gap, half3);
       }
       else if (!rm) { buttons.push(bt('No room near', 'Walk up to a room’s door', function () { }, 40, y0, bw, bh)); buttons[buttons.length - 1].dim = true; }
       else {
@@ -49,6 +62,7 @@
         var half = (bw - gap) / 2;
         if (MP.Naming.canSpeak()) buttons.push(bt('Speak it', 'Say the name', function () { MP.Naming.speak(rm); }, 40, y0 + bh + gap, half, bh));
         buttons.push(bt(rm.active ? 'Active' : 'Dormant', rm.active ? 'Top tier lit' : 'Make it active', function () { MP.Rooms.setActive(rm.address, !rm.active); }, MP.Naming.canSpeak() ? 40 + half + gap : 40, y0 + bh + gap, MP.Naming.canSpeak() ? half : bw, bh));
+        doorTool(40, y0 + 2 * (bh + gap), bw);
       }
     } else {
       buttons.push(bt('Turning', P.turnLabel() + ' · tap to change', function () { P.cycleTurn(); }, 40, y0, bw, bh));
@@ -93,7 +107,7 @@
   }
   function closeKeyboard(save) {
     var k = keyboard; keyboard = null;
-    if (save && k) MP.Rooms.setName(k.room.address, k.text);
+    if (save && k) { if (k.room.setName) k.room.setName(k.text); else MP.Rooms.setName(k.room.address, k.text); }
     face = 1; layout(); draw();
   }
 
@@ -132,12 +146,15 @@
     g.clearRect(0, 0, W, H); g.drawImage(paper, 0, 0);
     g.textBaseline = 'middle'; g.fillStyle = INK;
     if (keyboard) {
-      g.font = '40px ' + BRUSH; g.textAlign = 'left'; g.fillText('Name: ' + MP.Rooms.label(keyboard.room), 40, 58, W - 80);
+      g.font = '40px ' + BRUSH; g.textAlign = 'left'; g.fillText('Name: ' + (keyboard.room.label ? keyboard.room.label() : MP.Rooms.label(keyboard.room)), 40, 58, W - 80);
       g.font = '50px ' + BRUSH; var shown = keyboard.text + (Math.floor(performance.now() / 500) % 2 ? '|' : ' ');
       g.fillText(shown, 40, 112, W - 80);
       g.strokeStyle = 'rgba(31, 26, 20, 0.4)'; g.beginPath(); g.moveTo(40, 138); g.lineTo(W - 40, 138); g.stroke();
+    } else if (MP.Closets && MP.Closets.tool.active && face === 1) {
+      g.font = '50px ' + BRUSH; g.textAlign = 'left'; g.fillText('A closet door', 44, 230, W - 88);
+      g.font = '32px ' + BRUSH; g.globalAlpha = 0.8; ['Point at a wall: a ghost door shows where it goes', 'and what lies behind the wall. Pull the trigger', 'to make it. A closet is bigger inside than out.'].forEach(function (l, i) { g.fillText(l, 44, 290 + i * 42, W - 88); }); g.globalAlpha = 1;
     } else if (catalog) {
-      g.font = '44px ' + BRUSH; g.textAlign = 'left'; g.fillText('Add to the hall', 40, 70, W - 80);
+      g.font = '44px ' + BRUSH; g.textAlign = 'left'; g.fillText(MP.Things && MP.Things.inCloset() ? 'Add to this closet' : 'Add to the hall', 40, 70, W - 80);
       g.font = '26px ' + BRUSH; g.globalAlpha = 0.7; g.fillText('It appears in front of you. Grip it to move it; point and pull the trigger to use it.', 40, 128, W - 80); g.globalAlpha = 1;
     } else {
       g.font = '28px ' + BRUSH; g.textAlign = 'left'; g.globalAlpha = 0.7; g.fillText(note, 44, 150, W - 88); g.globalAlpha = 1;
@@ -205,6 +222,7 @@
     if (MP.awaitTrigger) { MP.awaitTrigger = false; MP.Links.go('clay', 'via=palace'); return; }
     if (MP.Sound) MP.Sound.wake(); // a trigger pull lets sound start
     if (rec.hand === 'right' && pointing) { if (hover >= 0) { buttons[hover].run(); if (!keyboard) layout(); draw(); } return; }
+    if (rec.hand === 'right' && MP.Closets && MP.Closets.tool.active) { MP.Closets.tool.place(); layout(); draw(); return; } // the Door tool
     if (MP.Grab && MP.Grab.press(rec, 'trigger')) return; // your hand is on something you can hold
     if (rec.hand !== 'right') return;
     if (MP.Interact) MP.Interact.select(rec);
