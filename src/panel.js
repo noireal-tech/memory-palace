@@ -4,8 +4,10 @@
    controller at the panel and push its stick left or right (while you point at the panel, the stick flips faces
    instead of turning you). The keyboard for naming a room takes the whole panel while you type.
      Go: Endless Clay, back to the forecourt, the Central Hall   (later: walk there, jump, search, Dream Journal)
-     Make: name this room, speak its name, active subject   (later: the Door tool, recordings, posters)
-     Settings: turning (snap 30° or 45°, smooth gentle or quick), teleport on or off, sound   (later: time of day) */
+     Make: name this room, speak its name, active subject; in the Central Hall: add a thing, put away the one you hold
+       (later: the Door tool, recordings, posters)
+     Settings: turning (snap 30° or 45°, smooth gentle or quick), teleport on or off, sound, the hall's sound   (later: time of day)
+   Adding a thing opens its catalog, which, like the keyboard, takes the whole panel. */
 (function () {
   'use strict';
   var MP = window.MP, R = MP.R, P = MP.Player;
@@ -18,7 +20,7 @@
   ray.visible = false;
   var dot = new THREE.Mesh(new THREE.SphereGeometry(0.003, 8, 6), new THREE.MeshBasicMaterial({ color: 0xa8342a })); dot.visible = false;
   var BRUSH = '"Kaushan Script", cursive', INK = '#1f1a14', SEAL = '#a8342a';
-  var FACES = ['Go', 'Make', 'Settings'], face = 0, keyboard = null, buttons = [], hover = -1, note = 'Forecourt';
+  var FACES = ['Go', 'Make', 'Settings'], face = 0, keyboard = null, catalog = false, buttons = [], hover = -1, note = 'Forecourt';
 
   // ---------- Faces ----------
   function bt(label, sub, run, x, y, w, h) { return { label: label, sub: sub, run: run, x: x, y: y, w: w, h: h }; }
@@ -26,6 +28,7 @@
   function layout() {
     buttons = [];
     if (keyboard) return layoutKeyboard();
+    if (catalog) return layoutCatalog();
     FACES.forEach(function (f, i) { buttons.push(bt(f, '', function () { flip(i - face); }, 40 + i * 232, 34, 220, 78)); buttons[i].tab = true; });
     var y0 = 196, bw = W - 80, bh = 118, gap = 18;
     if (face === 0) {
@@ -34,7 +37,13 @@
       buttons.push(bt('The Central Hall', 'Inside the gate, by the garden', function () { P.stand(); P.place(0, -7.4, Math.PI); if (MP.Portal) MP.Portal.reset(); }, 40, y0 + 2 * (bh + gap), bw, bh));
     } else if (face === 1) {
       var rm = roomNow();
-      if (!rm) { buttons.push(bt('No room near', 'Walk up to a room’s door', function () { }, 40, y0, bw, bh)); buttons[buttons.length - 1].dim = true; }
+      var held = MP.Things && MP.Things.held();
+      if (!rm && MP.Things && MP.Things.inHall()) { // in the Central Hall: set things out, put them away
+        buttons.push(bt('Add to the hall', 'A lantern, a bell, incense, fireflies…', function () { catalog = true; }, 40, y0, bw, bh));
+        if (held) buttons.push(bt('Put it away', 'The ' + MP.Things.name(held) + ' in your hand', function () { var h = MP.Things.held(); if (h) MP.Things.remove(h); }, 40, y0 + bh + gap, bw, bh));
+        else { buttons.push(bt('Hold something to put it away', 'Grip it, then come back here', function () { }, 40, y0 + bh + gap, bw, bh)); buttons[buttons.length - 1].dim = true; }
+      }
+      else if (!rm) { buttons.push(bt('No room near', 'Walk up to a room’s door', function () { }, 40, y0, bw, bh)); buttons[buttons.length - 1].dim = true; }
       else {
         buttons.push(bt('Name this room', MP.Rooms.label(rm), function () { MP.Naming.start(rm); }, 40, y0, bw, bh));
         var half = (bw - gap) / 2;
@@ -46,7 +55,18 @@
       var half2 = (bw - gap) / 2;
       buttons.push(bt('Teleport', P.settings.teleport ? 'On: stick forward' : 'Off: walk only', function () { P.setTeleport(!P.settings.teleport); }, 40, y0 + bh + gap, half2, bh));
       buttons.push(bt('Sound', MP.Sound && MP.Sound.on ? 'On' : 'Off', function () { MP.Sound.toggle(); }, 40 + half2 + gap, y0 + bh + gap, half2, bh));
+      var wn = MP.Sound && MP.Sound.hallSound === 'white';
+      buttons.push(bt('Hall sound', wn ? 'White noise: nothing else, inside the hall' : 'Natural: water, wind, the hall’s things', function () { MP.Sound.setHallSound(wn ? 'natural' : 'white'); }, 40, y0 + 2 * (bh + gap), bw, bh));
     }
+  }
+  // The catalog: what you can add to the hall, three by three, and a way back
+  function layoutCatalog() {
+    var cw = 216, ch = 98, gx = 14, top = 176, x0 = (W - (3 * cw + 2 * gx)) / 2;
+    MP.Things.CATALOG.forEach(function (c, i) {
+      buttons.push(bt(c.label, '', function () { MP.Things.spawn(c.kind); catalog = false; face = 1; }, x0 + (i % 3) * (cw + gx), top + Math.floor(i / 3) * (ch + gx), cw, ch));
+      buttons[buttons.length - 1].small = true;
+    });
+    buttons.push(bt('Back', '', function () { catalog = false; face = 1; }, 40, top + 3 * (ch + gx) + 4, W - 80, 76));
   }
   // Keyboard: big keys, the name so far across the top
   var ROWS = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'];
@@ -116,6 +136,9 @@
       g.font = '50px ' + BRUSH; var shown = keyboard.text + (Math.floor(performance.now() / 500) % 2 ? '|' : ' ');
       g.fillText(shown, 40, 112, W - 80);
       g.strokeStyle = 'rgba(31, 26, 20, 0.4)'; g.beginPath(); g.moveTo(40, 138); g.lineTo(W - 40, 138); g.stroke();
+    } else if (catalog) {
+      g.font = '44px ' + BRUSH; g.textAlign = 'left'; g.fillText('Add to the hall', 40, 70, W - 80);
+      g.font = '26px ' + BRUSH; g.globalAlpha = 0.7; g.fillText('It appears in front of you. Grip it to move it; point and pull the trigger to use it.', 40, 128, W - 80); g.globalAlpha = 1;
     } else {
       g.font = '28px ' + BRUSH; g.textAlign = 'left'; g.globalAlpha = 0.7; g.fillText(note, 44, 150, W - 88); g.globalAlpha = 1;
     }
@@ -124,7 +147,7 @@
       inkBox(g, b, on || cur || b.primary);
       g.textAlign = b.sub ? 'left' : 'center'; g.fillStyle = b.dim ? 'rgba(31, 26, 20, 0.5)' : INK;
       var tx = b.sub ? b.x + 28 : b.x + b.w / 2;
-      g.font = (b.tab ? 40 : keyboard ? 40 : 52) + 'px ' + BRUSH;
+      g.font = (b.tab ? 40 : keyboard ? 40 : b.small ? 34 : 52) + 'px ' + BRUSH;
       var label = keyboard && b.label.length === 1 && keyboard.lower ? b.label.toLowerCase() : b.label;
       g.fillText(label, tx, b.sub ? b.y + b.h * 0.38 : b.y + b.h / 2 + 2, b.w - 40);
       if (b.sub) { g.font = '30px ' + BRUSH; g.globalAlpha = 0.68; g.fillText(b.sub, tx, b.y + b.h * 0.75, b.w - 56); g.globalAlpha = 1; }
@@ -136,7 +159,7 @@
   // ---------- Flipping between faces ----------
   var flipT = -1, flipDir = 0, flipTo = 0;
   function flip(by) {
-    if (keyboard || !by) return;
+    if (keyboard || catalog || !by) return;
     flipTo = (face + by + FACES.length) % FACES.length; flipDir = by > 0 ? 1 : -1; flipT = 0;
   }
   function flipTick(dt) {
@@ -176,7 +199,7 @@
       }
     }
     redrawAcc += dt;
-    if (hover !== prev || (keyboard && redrawAcc > 0.5) || (face === 1 && redrawAcc > 1)) { redrawAcc = 0; if (!keyboard) layout(); draw(); } // the Make face follows the room you're near
+    if (hover !== prev || (keyboard && redrawAcc > 0.5) || (face === 1 && redrawAcc > 0.5)) { redrawAcc = 0; if (!keyboard) layout(); draw(); } // the Make face follows the room you're near and what you hold
   });
   P.onSelect = function (rec) {
     if (MP.awaitTrigger) { MP.awaitTrigger = false; MP.Links.go('clay', 'via=palace'); return; }
@@ -193,7 +216,7 @@
   MP.Panel = {
     say: function (t) { note = t; draw(); },
     pointing: function () { return pointing; },
-    face: function () { return keyboard ? 'Keyboard' : FACES[face]; },
+    face: function () { return keyboard ? 'Keyboard' : catalog ? 'Catalog' : FACES[face]; },
     flip: function (by) { flip(by); },
     buttons: function () { return buttons.map(function (b) { return b.label; }); },
     press: function (label) { for (var i = 0; i < buttons.length; i++) if (buttons[i].label === label) { buttons[i].run(); if (!keyboard) layout(); draw(); return true; } return false; },

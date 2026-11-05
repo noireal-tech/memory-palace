@@ -7,7 +7,7 @@
      straight flights and flat landings, easy on the stomach and good teleport spots;
    - a wooden bench by the garden: point at it and pull the trigger to sit, facing the garden or away from it (you
      face the side you were standing on); move the stick to stand;
-   - paper floor lanterns at the garden's corners. */
+   The paper lanterns at the garden's corners are things you can move and switch (things.js). */
 (function () {
   'use strict';
   var MP = window.MP, R = MP.R, G = MP.Geo, W = MP.World;
@@ -135,21 +135,9 @@
     return garden ? 'garden' : 'away';
   };
 
-  // ---------- Floor lanterns ----------
-  function lanterns(b) {
-    var M = MP.M, F = MP.KEEP.FLOOR;
-    [[-5.6, -5.0], [5.6, -5.0], [-5.6, 5.0], [5.6, 5.0]].forEach(function (p) {
-      G.box(b, M.inTimber, p[0] - 0.2, F, p[1] - 0.2, p[0] + 0.2, F + 0.12, p[1] + 0.2);
-      [[-1, -1], [1, -1], [1, 1], [-1, 1]].forEach(function (c) { G.box(b, M.inTimber, p[0] + c[0] * 0.17 - 0.025, F + 0.12, p[1] + c[1] * 0.17 - 0.025, p[0] + c[0] * 0.17 + 0.025, F + 0.92, p[1] + c[1] * 0.17 + 0.025); });
-      G.box(b, M.shoji, p[0] - 0.16, F + 0.2, p[1] - 0.16, p[0] + 0.16, F + 0.86, p[1] + 0.16);
-      G.box(b, M.inTimber, p[0] - 0.22, F + 0.92, p[1] - 0.22, p[0] + 0.22, F + 0.97, p[1] + 0.22);
-      W.solid(p[0] - 0.25, p[1] - 0.25, p[0] + 0.25, p[1] + 0.25, 1.0, 'hall');
-    });
-  }
-
   H.build = function (group) {
     var b = new MP.R.Batch(group);
-    stair(b); cascade(b, group); bench(b, group); lanterns(b);
+    stair(b); cascade(b, group); bench(b, group); // the paper lanterns are things now (things.js): they move
     b.flush();
   };
 })();

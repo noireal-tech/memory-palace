@@ -33,6 +33,8 @@
       var h = held[rec.i]; if (!h || h.button !== button) return;
       delete held[rec.i]; h.it.holder = null; h.it.drop(rec);
     },
+    // let go of an item without dropping it anywhere (it's being put away)
+    forget: function (it) { Object.keys(held).forEach(function (k) { if (held[k].it === it) delete held[k]; }); it.holder = null; },
     holding: function (rec) { var h = held[rec.i]; return h ? h.it : null; },
     within: function (rec) { return nearest(rec); },
     handPos: handPos, buzz: buzz, items: items

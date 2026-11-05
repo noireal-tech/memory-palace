@@ -46,7 +46,7 @@
     skin.keep(groups.keep); await MP.yieldFrame();
     // the Central Hall inside the keep: the gate, the cascade, the stair, the bench, the garden
     R.status('Furnishing the hall…', true);
-    await MP.Gate.build(groups.keep); MP.Hall.build(groups.hall); await MP.yieldFrame(); await MP.Garden.build(groups.hall); await MP.yieldFrame();
+    await MP.Gate.build(groups.keep); MP.Hall.build(groups.hall); await MP.yieldFrame(); await MP.Garden.build(groups.hall); await MP.yieldFrame(); await MP.Things.build(groups.hall); await MP.yieldFrame();
     MP.Portal.build(groups.site); MP.Sound.build(groups.site); await MP.yieldFrame();
     R.scene.add(MP.Rooms.group); await MP.Plan.load(); await MP.Rooms.load(); R.status('Raising your rooms…', true); MP.Rooms.build(); await MP.yieldFrame();
     // prepare every material's shaders before the first full frame, in the background where the browser allows it
@@ -89,6 +89,6 @@
     place: function (x, y, z, hold) { R.rig.position.set(x, y, z); P.hold = !!hold; MP.Portal.reset(); },
     look: function (yaw, pitch) { P.flatYaw = yaw; P.flatPitch = pitch; R.rig.rotation.y = yaw; R.camera.rotation.set(pitch, 0, 0); },
     walk: function (n, f, s) { for (var i = 0; i < n; i++) { P.move(1 / 60, f, s || 0); MP.Portal.check(); } return R.rig.position.toArray(); },
-    lastLink: function () { return MP.lastLink || null; }, hall: function () { return { gate: MP.Gate.angles(), garden: MP.Garden.report(), seat: MP.Player.seat }; }, detail: function () { MP.Detail.update(true); return MP.Detail.report(); }, sound: function () { return MP.Sound.debug(); }
+    lastLink: function () { return MP.lastLink || null; }, hall: function () { return { gate: MP.Gate.angles(), garden: MP.Garden.report(), seat: MP.Player.seat, things: MP.Things.report() }; }, detail: function () { MP.Detail.update(true); return MP.Detail.report(); }, sound: function () { return MP.Sound.debug(); }
   };
 })();

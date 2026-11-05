@@ -7,12 +7,18 @@
    - leaves rustling in the trees nearest you (only the closest few make sound, like the detail bubble)
    - evening cicadas (higurashi) in the pines round the moat, and now and then a bush warbler in the cherries
    - your footsteps: stone, gravel or grass, depending on what's under you
-   One wind drives everything: the chimes' sway, how often they ring, and the wind's own sound. */
+   - in the Central Hall: the cascade, and whatever you've set out there (a singing bowl, a wind bell, a bamboo
+     fountain, a koto box: things.js decides when they sound, here is how they sound)
+   One wind drives everything: the chimes' sway, how often they ring, and the wind's own sound.
+   Hall sound "White noise" (Settings face): inside the hall, every other sound fades out and plain white noise plays
+   instead; step outside and the world comes back.
+   Routing: every source → world → out → your ears; the white noise → out. The Sound switch is `out`; white noise
+   mode turns `world` down. (`master` below is `world`.) */
 (function () {
   'use strict';
   var MP = window.MP, R = MP.R;
   var S = MP.Sound = { on: true, ready: false };
-  var listener = null, ctx = null, master = null;
+  var listener = null, ctx = null, master = null, out = null, white = null, hallBus = null;
 
   // ---------- The wind: a slow, gusty value 0..1 everyone shares ----------
   var W = MP.Wind = { t: 0, gust: 0.3 };
@@ -31,11 +37,11 @@
     return buf;
   }
   function loop(buf) { var s = ctx.createBufferSource(); s.buffer = buf; s.loop = true; s.loopStart = 0; s.loopEnd = buf.duration - 0.05; s.start(ctx.currentTime + Math.random() * 0.5); return s; }
-  function positional(obj, node, ref, roll, max) {
+  function positional(obj, node, ref, roll, max, dest) {
     var p = new THREE.PositionalAudio(listener);
     p.panner.panningModel = 'HRTF'; p.setDistanceModel('inverse'); p.setRefDistance(ref); p.setRolloffFactor(roll); p.setMaxDistance(max);
     p.setNodeSource(node); obj.add(p);
-    p.gain.disconnect(); p.gain.connect(master); // everything goes through the master volume (the Sound switch)
+    p.gain.disconnect(); p.gain.connect(dest || master); // everything goes through the world bus, then the Sound switch
     return p;
   }
 
@@ -263,6 +269,66 @@
   }
   MP.Sound.surfaceAt = surfaceAt;
 
+  // ---------- Things set out in the hall (things.js) ----------
+  // Each gets its own voice: a bus placed at the thing, so it sounds from where it stands.
+  var things = [], SPOT = { bowl: [1.5, 1.2], furin: [1.4, 1.1], shishi: [1.6, 1.2], koto: [1.3, 1.2] };
+  function voice(t) {
+    if (t.voice || !SPOT[t.kind] || !ctx) return;
+    var bus = ctx.createGain(), sp = SPOT[t.kind]; bus.gain.value = 1;
+    t.voice = { bus: bus, p: positional(t.anchor, bus, sp[0], sp[1], 40, hallBus) };
+    if (t.kind === 'shishi') { // the trickle into its basin, while it runs
+      var src = loop(noiseBuffer(3, false)), bp = ctx.createBiquadFilter(), g = ctx.createGain(); bp.type = 'bandpass'; bp.frequency.value = 2900; bp.Q.value = 1.1; g.gain.value = 0;
+      src.connect(bp); bp.connect(g); g.connect(bus); t.voice.trickle = g;
+    }
+    S.thingState(t);
+  }
+  S.addThing = function (t) { things.push(t); voice(t); };
+  S.removeThing = function (t) {
+    var i = things.indexOf(t); if (i >= 0) things.splice(i, 1);
+    if (t.voice) { var v = t.voice; v.bus.gain.setTargetAtTime(0, ctx.currentTime, 0.05); setTimeout(function () { try { v.bus.disconnect(); v.p.disconnect(); } catch (e) { } if (v.p.parent) v.p.parent.remove(v.p); }, 300); t.voice = null; }
+  };
+  S.thingState = function (t) { if (t.voice && t.voice.trickle) t.voice.trickle.gain.setTargetAtTime(t.on ? 0.05 : 0, ctx.currentTime, 0.2); };
+  function partial(dest, t0, f, gain, decay, detune) { // one ringing partial; two oscillators a hair apart make it shimmer
+    [0, detune || 0].forEach(function (d, k) {
+      if (k && !detune) return;
+      var o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = f + d;
+      g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(gain / (detune ? 2 : 1), t0 + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t0 + decay);
+      o.connect(g); g.connect(dest); o.start(t0); o.stop(t0 + decay + 0.05);
+    });
+  }
+  function knock(dest, t0, f, q, gain, len) { // a short filtered noise burst: a tap, a knock, a pluck's bite
+    var n = ctx.createBufferSource(), bp = ctx.createBiquadFilter(), g = ctx.createGain(); n.buffer = knock.buf || (knock.buf = noiseBuffer(0.5, false));
+    bp.type = 'bandpass'; bp.frequency.value = f; bp.Q.value = q; g.gain.setValueAtTime(gain, t0); g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
+    n.connect(bp); bp.connect(g); g.connect(dest); n.start(t0); n.stop(t0 + len + 0.02);
+  }
+  // play(t, what, opts): a sound from a thing, now
+  S.play = function (t, what, o) {
+    if (!t.voice || !S.on) return false; var bus = t.voice.bus, t0 = ctx.currentTime + 0.005; o = o || {};
+    if (what === 'strike') { // a singing bowl: inharmonic partials that ring for a long time
+      var f0 = o.f || 220;
+      [[1, 0.42, 11, 0.7], [2.76, 0.24, 7, 1.3], [5.4, 0.1, 4, 2.1], [8.93, 0.04, 2.2, 3]].forEach(function (p) { partial(bus, t0, f0 * p[0], p[1] * (o.gain || 1), p[2], p[3]); });
+      knock(bus, t0, 2400, 2, 0.15, 0.05);
+    } else if (what === 'ting') { // a glass wind bell
+      var fb = o.f || 2650;
+      [[1, 0.1, 1.8], [2.03, 0.05, 1.1], [3.3, 0.025, 0.6]].forEach(function (p) { partial(bus, t0, fb * p[0], p[1] * (o.gain || 1), p[2], 2); });
+    } else if (what === 'clack') { // the bamboo arm knocking on its stone
+      knock(bus, t0, 1100, 4, 0.9, 0.09); partial(bus, t0, 520, 0.35, 0.16); partial(bus, t0 + 0.002, 170, 0.3, 0.12);
+    } else if (what === 'pluck') { // a koto string: a bright twang that settles into a soft tone
+      var fk = o.f || 440, ok = ctx.createOscillator(), o2 = ctx.createOscillator(), g = ctx.createGain(), lp = ctx.createBiquadFilter();
+      ok.type = 'triangle'; o2.type = 'sawtooth'; ok.frequency.setValueAtTime(fk * 1.012, t0); ok.frequency.exponentialRampToValueAtTime(fk, t0 + 0.06); o2.frequency.value = fk;
+      lp.type = 'lowpass'; lp.frequency.setValueAtTime(fk * 8, t0); lp.frequency.exponentialRampToValueAtTime(fk * 1.5, t0 + 0.5);
+      var g2 = ctx.createGain(); g2.gain.value = 0.18; o2.connect(g2); g2.connect(lp); ok.connect(lp); lp.connect(g);
+      g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(0.16 * (o.gain || 1), t0 + 0.003); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 2.4);
+      g.connect(bus); ok.start(t0); o2.start(t0); ok.stop(t0 + 2.5); o2.stop(t0 + 2.5);
+      knock(bus, t0, fk * 3, 1.5, 0.08, 0.03);
+    }
+    return true;
+  };
+  S.WHITE = 0.07; // how loud the white noise is
+  S.hallSound = 'natural';
+  try { if (localStorage.getItem('mp.hallsound') === 'white') S.hallSound = 'white'; } catch (e) { }
+  S.setHallSound = function (mode) { S.hallSound = mode === 'white' ? 'white' : 'natural'; try { localStorage.setItem('mp.hallsound', S.hallSound); } catch (e) { } return S.hallSound; };
+
   // ---------- Starting (a browser lets sound start only after a tap, click or trigger pull) ----------
   var group = null;
   S.build = function (g) { group = g; buildChimes(g); R.onFrame(tick); };
@@ -270,17 +336,21 @@
     if (!group) return;
     if (!listener) {
       listener = new THREE.AudioListener(); R.camera.add(listener); ctx = listener.context;
-      master = ctx.createGain(); master.gain.value = S.on ? 1 : 0; master.connect(listener.getInput());
-      if (MP.DEBUG) { S.analyser = ctx.createAnalyser(); S.analyser.fftSize = 2048; master.connect(S.analyser); }
+      out = ctx.createGain(); out.gain.value = S.on ? 1 : 0; out.connect(listener.getInput());
+      master = ctx.createGain(); master.gain.value = 1; master.connect(out);
+      if (MP.DEBUG) { S.analyser = ctx.createAnalyser(); S.analyser.fftSize = 2048; out.connect(S.analyser); }
+      var wn = loop(noiseBuffer(4, false)); white = ctx.createGain(); white.gain.value = 0; wn.connect(white); white.connect(out);
+      hallBus = ctx.createGain(); hallBus.gain.value = 1; hallBus.connect(master); hallBus.inside = null;
       chimeBus = ctx.createGain(); chimeBus.gain.value = 1;
       positional(chime.group, chimeBus, 2.5, 1.1, 90);
       makeWind(); makeWater(group); makeHum(group); makeRustles(group); makeCicadas(group); makeWarbler(group); makeSteps();
       if (MP.Hall) makeCascade(group);
       S.ready = true;
+      things.forEach(voice); // things set out before sound could start
     }
     if (ctx.state !== 'running') ctx.resume();
   };
-  S.toggle = function () { S.on = !S.on; if (master) master.gain.setTargetAtTime(S.on ? 1 : 0, ctx.currentTime, 0.1); try { localStorage.setItem('mp.sound', S.on ? '1' : '0'); } catch (e) { } return S.on; };
+  S.toggle = function () { S.on = !S.on; if (out) out.gain.setTargetAtTime(S.on ? 1 : 0, ctx.currentTime, 0.1); try { localStorage.setItem('mp.sound', S.on ? '1' : '0'); } catch (e) { } return S.on; };
   try { if (localStorage.getItem('mp.sound') === '0') S.on = false; } catch (e) { }
   function tick(dt, now) {
     chimeTick(dt, now);
@@ -291,6 +361,10 @@
       if (warbler && ctx.currentTime >= warbler.next) warblerSong();
     }
     var isIn = indoors();
+    // white noise in the hall: everything else fades out
+    var wn = isIn && S.hallSound === 'white';
+    if (wn !== S.whiteNow) { S.whiteNow = wn; master.gain.setTargetAtTime(wn ? 0 : 1, ctx.currentTime, 0.4); white.gain.setTargetAtTime(wn ? S.WHITE : 0, ctx.currentTime, 0.4); }
+    if (isIn !== hallBus.inside) { hallBus.inside = isIn; hallBus.gain.setTargetAtTime(isIn ? 1 : 0.06, ctx.currentTime, 0.3); } // the walls muffle the hall's things outside
     if (cascade) { // the cascade is heard in the hall; outside the keep's walls only the faintest trickle reaches you
       if (isIn !== cascade.inside) { cascade.inside = isIn; cascade.bus.gain.setTargetAtTime(isIn ? 1 : 0.06, ctx.currentTime, 0.3); }
       if (isIn && S.on && ctx.currentTime >= cascade.next) drip();
@@ -299,7 +373,7 @@
   }
   ['pointerdown', 'keydown', 'click'].forEach(function (ev) { addEventListener(ev, function () { S.wake(); }, { capture: true }); });
   R.onSession('start', function () { S.wake(); });
-  S.debug = function () { return { cascade: !!cascade, ready: S.ready, state: ctx && ctx.state, on: S.on, gust: Math.round(W.gust * 100) / 100, chimeSwing: chime && Math.round(chime.swing * 100) / 100 }; };
+  S.debug = function () { return { hallSound: S.hallSound, white: !!S.whiteNow, world: master ? Math.round(master.gain.value * 100) / 100 : null, things: things.length, voices: things.filter(function (t) { return t.voice; }).length, cascade: !!cascade, ready: S.ready, state: ctx && ctx.state, on: S.on, gust: Math.round(W.gust * 100) / 100, chimeSwing: chime && Math.round(chime.swing * 100) / 100 }; };
   // test helper: loudness now (RMS) and the strongest frequency
   S.level = function () {
     if (!S.analyser) return null; var a = S.analyser, d = new Float32Array(a.fftSize), f = new Float32Array(a.frequencyBinCount); a.getFloatTimeDomainData(d); a.getFloatFrequencyData(f);
