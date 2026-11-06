@@ -68,6 +68,16 @@ async def flat(b, r):
     await E("(() => { const c = palaceDebug.MP.Panel.canvas, a = document.createElement('a'); window.__panel = c.toDataURL(); })()")
     data = await E('window.__panel')
     import base64; open(os.path.join(SHOTS, 'panel-settings.png'), 'wb').write(base64.b64decode(data.split(',')[1]))
+    # standing still with your head swaying over a step's edge: the view must not bob between the two floors (the shake
+    # Endless Clay once had). 3 cm of sway at 7 Hz-ish, on each edge in the foyer and at the gate's sill.
+    r['sway on edges'] = await pg.evaluate('''(function () {
+      var P = palaceDebug.MP.Player, rig = palaceDebug.MP.R.rig, out = {};
+      [['step', -17.0, 0.04], ['step from below', -17.0, -0.1], ['sill', -12.14, 0.04], ['porch', -19.0, 0.06], ['threshold', -18.75, 0.03]].forEach(function (c) {
+        palaceDebug.place(0, c[2], c[1]); rig.position.y = c[2]; var ys = [], last = 0;
+        for (var f = 0; f < 240; f++) { var s = Math.sin(f * 0.7) * 0.03; rig.position.z += s - last; last = s; P.move(1 / 72, 0, 0); if (f >= 30) ys.push(rig.position.y); }
+        out[c[0]] = Math.round((Math.max.apply(null, ys) - Math.min.apply(null, ys)) * 1000);
+      });
+      return out; })()''')
     r['flat errors'] = errs
     await ctx.close()
 
@@ -126,7 +136,7 @@ async def main():
     ok = (r['paving']['ok'] and r['paving']['point'][2] > -25 and r['water'] == 'water' and r['wall'] == 'wall' and r['closed door'] == 'wall' and r['roof'] == 'wall'
           and r['open door'] and r['landed'] and r['current room'] == 'E1.W.N2' and r['blink cleared'] and r['walk out under lintel']
           and all(k in r['settings buttons'] for k in ('Turning', 'Teleport', 'Sound'))
-          and r['after reload'] == {'turn': 'smooth', 'teleport': False} and r['teleport off: no aim'] and r['space teleport'] and not r['flat errors']
+          and r['after reload'] == {'turn': 'smooth', 'teleport': False} and r['teleport off: no aim'] and r['space teleport'] and all(v <= 2 for v in r['sway on edges'].values()) and not r['flat errors']
           and r['in VR'] and r['vr aiming'] and r['vr moved (m)'] > 1 and abs(r['snap step (deg)'] - 30) < 0.5 and abs(r['snap45 step (deg)'] - 45) < 0.5
           and abs(r['smooth rate (deg/s)'] - 60) < 1 and not r['vr errors'])
     print('MOVE TESTS', 'PASSED' if ok else 'FAILED')

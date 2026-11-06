@@ -35,9 +35,21 @@
   };
   P.turn = function (a) { var h = head(new THREE.Vector3()); rig.position.sub(h); rig.position.applyAxisAngle(up, a); rig.position.add(h); rig.rotation.y += a; };
 
+  // Feet follow the floor under your head. Stepping up is at once; stepping down waits until your head is a hand's width
+  // past the edge. Without that wait, the few millimetres a head sways while you stand still on the edge of a step
+  // flipped you between the two heights every frame: a 14 cm bob a headset makes very visible (Endless Clay had the
+  // same kind of shake). STICK is how far the floor you're on still holds you; LEVEL is how close counts as that floor.
+  var STICK = 0.15, LEVEL = 0.02, around = [];
+  for (var a = 0; a < 8; a++) around.push([Math.cos(a * Math.PI / 4) * STICK, Math.sin(a * Math.PI / 4) * STICK]);
+  function floorUnder(x, z, feet) {
+    var g = W.groundAt(x, z); if (g !== g) return g;
+    if (g < feet - LEVEL) for (var i = 0; i < around.length; i++) { var k = W.groundAt(x + around[i][0], z + around[i][1]); if (k === k && Math.abs(k - feet) <= LEVEL) return feet; }
+    return g;
+  }
+  P.floorUnder = floorUnder;
   function settle() {
     if (P.hold || P.seat) return;
-    var h = head(tmp), g = W.groundAt(h.x, h.z); if (g !== g) return;
+    var h = head(tmp), g = floorUnder(h.x, h.z, rig.position.y); if (g !== g) return;
     rig.position.y += (g - rig.position.y) * 0.35; if (Math.abs(g - rig.position.y) < 0.01) rig.position.y = g;
   }
   function canStand(x, z, feet) { var g = W.groundAt(x, z); return g === g && g - feet <= 0.5 && !W.blocked(x, z, feet); }
